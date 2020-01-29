@@ -1,0 +1,12 @@
+[syntax=glob]
+*.bak
+*.o
+*.ppu
+fp.ini
+fp.cfg
+fp.dsk
+lib
+backup
+turbogopher
+turbogopher.lpi
+turbogopher.lps
