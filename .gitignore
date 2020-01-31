@@ -8,6 +8,8 @@ fp.cfg
 fp.dsk
 lib
 backup
-turbogopher
+fpmake
+manifest.xml
+src/turbogopher
 turbogopher.lpi
 turbogopher.lps
