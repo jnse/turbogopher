@@ -17,12 +17,12 @@ begin
         with Targets do
         begin
 
-            If FindFirst('*.pas', faAnyFile, Info)=0 then
+            If FindFirst('src/*.pas', faAnyFile, Info)=0 then
             begin
                 repeat
                     with Info do
                     begin
-                        AddUnit(Name);
+                        AddUnit('src/'+Name);
                     end;
                 until FindNext(Info) <> 0;
             end;
