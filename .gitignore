@@ -2,6 +2,7 @@
 *.bak
 *.o
 *.ppu
+*.swp
 fp.ini
 fp.cfg
 fp.dsk
