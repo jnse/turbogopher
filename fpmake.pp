@@ -17,7 +17,7 @@ begin
         with Targets do
         begin
 
-            If FindFirst('src/*.pas', faAnyFile, Info)=0 then
+            If FindFirst('src/*.pp', faAnyFile, Info)=0 then
             begin
                 repeat
                     with Info do

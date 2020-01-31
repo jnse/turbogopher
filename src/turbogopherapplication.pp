@@ -12,7 +12,8 @@ uses
   Drivers,
   Views,
   Menus,
-  SysUtils;
+  SysUtils,
+  GopherClient;
 
 type
 
@@ -25,6 +26,7 @@ type
     TTurboGopherApplication = class(TCustomApplication)
     private
         TurboGraphicsApplication: TTGApp;
+        Client: TGopherClient;
     protected
         procedure DoRun; override;
     public
