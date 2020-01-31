@@ -11,5 +11,7 @@ backup
 fpmake
 manifest.xml
 src/turbogopher
+turbogopher
+turbogopher-x86_64-linux.fpm
 turbogopher.lpi
 turbogopher.lps
