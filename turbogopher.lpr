@@ -1,23 +1,22 @@
-
 Program turbogopher;
 
 {$mode objfpc}{$H+}
 
-Uses 
+Uses
   {$IFDEF UNIX}{$IFDEF UseCThreads}
 cthreads,
   {$ENDIF}{$ENDIF}
 Classes,
 SysUtils,
 CustApp,
-MainWindow,
 TurboGopherApplication;
 
-Var 
+Var
   Application: TTurboGopherApplication;
 Begin
   Application := TTurboGopherApplication.Create(Nil);
-  Application.Title := 'TurboGopher';
+  Application.Title:='TurboGopher';
   Application.Run;
   Application.Free;
 End.
+

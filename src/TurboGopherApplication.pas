@@ -33,7 +33,8 @@ type
         constructor Create(TheOwner: TComponent); override;
         destructor Destroy; override;
         procedure GetExtent(var Extent: Objects.TRect);
-        function ValidView(P: PView) : PView;
+        function GetClient(): TGopherClient;
+        function ValidView(P: PView): PView;
         procedure WriteHelp; virtual;
     end;
 
@@ -55,6 +56,7 @@ implementation
     var
         Rect: Objects.TRect;
     begin
+        Rect := default(Objects.TRect);
         GetExtent(Rect);
         Rect.A.Y := Rect.B.Y - 1;
         StatusLine := New(
@@ -74,6 +76,7 @@ implementation
     var 
         Rect: Objects.TRect;
     begin
+        Rect := default(Objects.TRect);
         GetExtent(Rect);
         Rect.B.Y := Rect.A.Y + 1;
         MenuBar := New(
@@ -116,6 +119,7 @@ implementation
         TurboGraphicsApplication.Init;
         // Create main window
         FMainWindow := TMainWindow.Create(Self);
+        FMainWindow.Get;
         // Run TG app
         TurboGraphicsApplication.Run;
         // Clean shutdown
@@ -127,6 +131,7 @@ implementation
     begin
       inherited Create(TheOwner);
       StopOnException:=True;
+      Client := TGopherClient.Create();
     end;
 
     destructor TTurboGopherApplication.Destroy;
@@ -134,6 +139,11 @@ implementation
       inherited Destroy;
     end;
 
+    function TTurboGopherApplication.GetClient(): TGopherClient;
+    begin
+        result := Client;
+    end;
+ 
     procedure TTurboGopherApplication.GetExtent(Var Extent: Objects.TRect);
     begin
         TurboGraphicsApplication.GetExtent(Extent);
