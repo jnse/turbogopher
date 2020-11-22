@@ -10,6 +10,8 @@ uses
   Classes,
   CustApp,
   Drivers,
+  FileLogger,
+  Logger,
   Views,
   Menus,
   SysUtils,
@@ -24,25 +26,31 @@ type
     end;
 
     TTurboGopherApplication = class(TCustomApplication)
-    private
-        TurboGraphicsApplication: TTGApp;
-        Client: TGopherClient;
-    protected
-        procedure DoRun; override;
     public
         constructor Create(TheOwner: TComponent); override;
         destructor Destroy; override;
-        procedure GetExtent(var Extent: Objects.TRect);
         function GetClient(): TGopherClient;
+        procedure GetExtent(var Extent: Objects.TRect);
+        function GetLogger(): PLogger;
         function ValidView(P: PView): PView;
         procedure WriteHelp; virtual;
+    protected
+        procedure DoRun; override;
+    private
+        TurboGraphicsApplication: TTGApp;
+        Client: TGopherClient;
+        Logger: TLogger;
+        FileLogger: TFileLogger;
     end;
 
 implementation
 
-    uses MainWindow;
+    uses
+        LogWindow,
+        MainWindow;
 
     var
+        FLogWindow: TLogWindow;
         FMainWindow: TMainWindow;
 
     { TTGApp }
@@ -96,11 +104,23 @@ implementation
 
     { TTurboGopherApplication }
 
+    constructor TTurboGopherApplication.Create(TheOwner: TComponent);
+    begin
+      inherited Create(TheOwner);
+      StopOnException := True;
+      TurboGraphicsApplication.Init;
+      Logger := TLogger.Create;
+      FileLogger := TFileLogger.Create(@Logger, '/tmp/turbogopher_debug.txt');
+      Client := TGopherClient.Create(@Logger);
+      FLogWindow := TLogWindow.Create(Self);
+      FMainWindow := TMainWindow.Create(Self);
+    end;
+
     procedure TTurboGopherApplication.DoRun;
     var
         ErrorMsg: String;
     begin
-        // quick check parameters
+        { quick check parameters }
         ErrorMsg:=CheckOptions('h', 'help');
         if ErrorMsg<>'' then
         begin
@@ -108,30 +128,20 @@ implementation
              Terminate;
              Exit;
         end;
-        // parse parameters
+        { parse parameters }
         if HasOption('h', 'help') then
         begin
              WriteHelp;
              Terminate;
              Exit;
         end;
-        // Init TG app
-        TurboGraphicsApplication.Init;
-        // Create main window
-        FMainWindow := TMainWindow.Create(Self);
+        { TEST }
         FMainWindow.Get;
-        // Run TG app
+        { Run TG app }
         TurboGraphicsApplication.Run;
-        // Clean shutdown
+        { Clean shutdown }
         TurboGraphicsApplication.Done;
         Terminate;
-    end;
-
-    constructor TTurboGopherApplication.Create(TheOwner: TComponent);
-    begin
-      inherited Create(TheOwner);
-      StopOnException:=True;
-      Client := TGopherClient.Create();
     end;
 
     destructor TTurboGopherApplication.Destroy;
@@ -143,7 +153,12 @@ implementation
     begin
         result := Client;
     end;
- 
+
+    function TTurboGopherApplication.GetLogger(): PLogger;
+    begin
+        Result := @Logger;
+    end;
+
     procedure TTurboGopherApplication.GetExtent(Var Extent: Objects.TRect);
     begin
         TurboGraphicsApplication.GetExtent(Extent);

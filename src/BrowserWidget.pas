@@ -43,39 +43,47 @@ end;
 
 procedure TBrowserWidget.Add(text: string);
 var
-  LineCount: SizeInt;
   Attrs: Byte;
-  CC: char;
+  CC, PC: char;
   NewChar: TBrowserCharacter;
   I: SizeInt;
   Line: TBrowserString;
 begin
+    PC := chr(0);
     Line := default(TBrowserString);
-    { get line count, allocate a line if needed. }
-    LineCount := Length(Lines);
-    if (LineCount = 0) then SetLength(Lines, LineCount + 1);
     { determine attributes for characters }
     Attrs := (CurrentForegroundColor * 16) + CurrentBackgroundColor;
     { iterate characters in text to be added }
     for I := 0 to (Length(text) - 1) do
     begin
-        { if the character is a new line, allocate a new line and save the previous one. }
+        (* If the character is a new line, allocate a new line and save the
+           previous one. *)
         CC := text[I + 1];
         if (ord(CC) = 10) or (ord(CC) = 13) then
         begin
-            Lines[LineCount] := Line;
-            Line := default(TBrowserString);
-            LineCount := Length(Lines);
-            SetLength(Lines, LineCount + 1);
+            (* If the previous character was a <CR> and the current character is
+               an <LF> then ignore and don't add an additional new line. *)
+            if not ((ord(PC) = 13) and (ord(CC) = 10)) then
+            begin
+                SetLength(Lines, Length(Lines) + 1);
+                Lines[Length(Lines) - 1] := Line;
+                Line := default(TBrowserString);
+            end;
+            PC := CC;
             continue;
         end;
         NewChar.character := ord(text[I + 1]);
         NewChar.attributtes := Attrs;
         SetLength(Line, Length(Line) + 1);
         Line[Length(Line) - 1] := NewChar;
+        PC := CC;
     end;
     { add the line to our lines array. }
-    Lines[LineCount] := Line;
+    if (Line <> nil) then
+    begin
+        SetLength(Lines, Length(Lines) + 1);
+        Lines[Length(Lines) - 1] := Line;
+    end;
 end;
 
 procedure TBrowserWidget.Draw;
