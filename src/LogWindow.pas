@@ -25,8 +25,8 @@ type
         );
         procedure Draw; virtual;
         private
-            Logger: PLogger;
-            Filter: TLogLevelFilter;
+            var Logger: PLogger;
+            var Filter: TLogLevelFilter;
     end;
     PLogWidget = ^TLogWidget;
 
@@ -38,8 +38,8 @@ type
             const Level: TLogLevel
         );
     private
-        App: TTurboGopherApplication;
-        LogWidget: PLogWidget;
+        var App: TTurboGopherApplication;
+        LogWidget: TLogWidget;
         Rect: TRect;
         Win: PWindow;
     end;
@@ -117,16 +117,13 @@ implementation
 
         Win^.GetExtent(Rect);
         Rect.Grow(-2, -1);
-        LogWidget := New(
-            PLogWidget,
-            Init(
-                App.GetLogger(),
-                Rect,
-                Win^.StandardScrollBar(sbHorizontal),
-                Win^.StandardScrollBar(sbVertical)
-            )
+        LogWidget.Init(
+            App.GetLogger(),
+            Rect,
+            Win^.StandardScrollBar(sbHorizontal),
+            Win^.StandardScrollBar(sbVertical)
         );
-        Win^.Insert(LogWidget);
+        Win^.Insert(@LogWidget);
 
         (* Register our callback into the logger. *)
         App.GetLogger()^.RegisterCallback(@OnLogMessage);
@@ -138,7 +135,7 @@ implementation
         const Level: TLogLevel
     );
     begin
-        LogWidget^.Draw;
+        LogWidget.Draw;
     end;
 
 end.

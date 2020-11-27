@@ -43,6 +43,8 @@ type
         FileLogger: TFileLogger;
     end;
 
+    PTurboGopherApplication = ^TTurboGopherApplication;
+
 implementation
 
     uses

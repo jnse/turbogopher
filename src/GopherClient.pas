@@ -10,7 +10,8 @@ uses
     StringUtils,
 
     Classes,
-    ssockets,
+    Regexpr,
+    Ssockets,
     SysUtils;
 
 type
@@ -26,6 +27,7 @@ type
 
     TTokenizedUrl = record
         Host: string;
+        DocumentType: string;
         Path: string;
         Port: Word;
     end;
@@ -56,13 +58,19 @@ implementation
     begin
         Result := default(TGopherMenuItems);
         Lines := StringSplit(Body, chr(13) + chr(10));
+        if (Length(Lines) = 0) then
+        begin
+            { eh.... not a menu? fallback. }
+            Lines := Body.Split([chr(13), chr(10)]);
+        end;
+
         for I := 0 to Length(Lines) - 1 do
         begin
             if (Length(Lines) > 2) then
             begin
                 if Lines[I] = '.' then Exit; { Single dot marks the end. }
                 MenuItem := ParseMenuItem(Lines[I]);
-                if (MenuItem.Valid <> True) then continue;
+{                if (MenuItem.Valid <> True) then continue;}
                 SetLength(Result, Length(Result) + 1);
                 Result[Length(Result) - 1] := MenuItem;
             end;
@@ -77,7 +85,7 @@ implementation
         (* Initialize with some default values first. *)
         ParsedItem := ItemLine;
         Result.ItemType := '3';
-        Result.DisplayString := '';
+        Result.DisplayString := ItemLine;
         Result.SelectorString := '';
         Result.Valid := False;
         (* We need at least a first character to get an item type. *)
@@ -99,6 +107,9 @@ implementation
         GopherURI: string = 'gopher://';
         gsPath: string = '/';
         GopherPort: Integer = 70;
+    var
+        unparsedPath: AnsiString;
+        re: TRegExpr;
     begin
         if Pos(GopherURI, Url) <> 0 then
         begin
@@ -109,10 +120,10 @@ implementation
         end;
         if Pos(gsPath, Url) = 0 then
         begin
-            Result.Path := gsPath
+            unparsedPath := gsPath
         end else
         begin
-            Result.Path := Copy(Url, Pos(gsPath, Url), Length(Url))
+            unparsedPath := Copy(Url, Pos(gsPath, Url), Length(Url))
         end;
         if Pos(':', Url) = 0 then
         begin
@@ -130,7 +141,15 @@ implementation
           Result.Port := StrToInt(
               Copy(Url, Pos(':', Url) + 1, Pos(gsPath, Url) - 1)
           );
-      end    
+      end;
+      if Length(unparsedPath) = 0 then Exit;
+      unparsedPath := ReplaceRegExpr('/+', unparsedPath, '/', True);
+      re := TRegExpr.Create('^/?(.)/(.*)');
+      if re.Exec(unparsedPath) then
+      begin
+          Result.DocumentType := re.Match[1];
+          Result.Path := '/' + re.Match[2];
+      end;
     end;
 
     function TGopherClient.Get(Url: String): String;
@@ -142,6 +161,8 @@ implementation
         Buf: array[0..4095] of Char = '';
         Count: Integer = 4094;
         ReadResult: LongInt = 1;
+        Menu: TGopherMenuItems;
+        I: SizeInt;
     begin
         TokenizedUrl := ParseUrl(Url);
         try
@@ -182,6 +203,16 @@ implementation
         end;
         Logger^.Debug('Successfully retrieved ' + Url);
         ClientSocket.Free;
+        Menu := ParseMenu(Result);
+        if (Length(menu) = 0) then
+        begin
+            Logger^.Error('Could not parse server response as menu: ' + Result);
+        end;
+        Result := '';
+        for I := 0 to Length(Menu) - 1 do
+        begin
+            Result += Menu[I].DisplayString + chr(10);
+        end;
     end;
 
 end.

@@ -18,7 +18,7 @@ type
     private
         Rect: TRect;
         Win: PWindow;
-        App: TTurboGopherApplication;
+        var App: TTurboGopherApplication;
         Text: AnsiString;
         Browser: PBrowserWidget;
     public
@@ -43,7 +43,8 @@ implementation
             (* Create browser widget *)
             Win^.GetClipRect(Rect);
             Rect.Grow(-1, -1);
-            Browser := New(PBrowserWidget, Init(
+            Browser := New(PBrowserWidget,Init(
+                TheApp,
                 Rect,
                 Win^.StandardScrollBar(sbHorizontal),
                 Win^.StandardScrollBar(sbVertical)
@@ -58,9 +59,8 @@ implementation
         client: TGopherClient;
     begin
         client := App.GetClient();
-        url := 'gopher://sdf.org';
+        url := 'gopher://gopher.linkerror.com/0/testfile';
         text := client.Get(url);
-        client.ParseMenu(text);
         Browser^.Add(text);
         Browser^.Draw;
     end;
