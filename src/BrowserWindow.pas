@@ -1,34 +1,39 @@
-unit MainWindow;
+unit BrowserWindow;
 
 {$mode objfpc}{$H+}
 
 interface
 
 uses
+    GopherClient,
+    BrowserWidget,
+    TurboGopherApplication,
+    TurboGopherWindow,
+
     App,
     Classes,
-    SysUtils,
+    CustApp,
     Objects,
-    Views,
-    TurboGopherApplication,
-    GopherClient,
-    BrowserWidget;
+    SysUtils,
+    Views;
+
 type
-    TMainWindow = class
+    PBrowserWindow = ^TBrowserWindow;
+    TBrowserWindow = class(TTurboGopherWindow)
+    public
+        constructor Create(var TheApp: TTurboGopherApplication);
+        procedure Get(url: AnsiString);
     private
         Rect: TRect;
         Win: PWindow;
-        var App: TTurboGopherApplication;
         Text: AnsiString;
         Browser: PBrowserWidget;
-    public
-        constructor Create(var TheApp: TTurboGopherApplication);
-        procedure Get();
+        App: TTurboGopherApplication;
     end;
 
 implementation
 
-    constructor TMainWindow.Create(var TheApp: TTurboGopherApplication);
+    constructor TBrowserWindow.Create(var TheApp: TTurboGopherApplication);
     begin
         App := TheApp;
         (* Figure out where to position ourselves *)
@@ -53,16 +58,15 @@ implementation
         end;
     end;
 
-    procedure TMainWindow.Get();
+    procedure TBrowserWindow.Get(url: AnsiString);
     var
-        url: string;
         client: TGopherClient;
     begin
         client := App.GetClient();
-        url := 'gopher://gopher.linkerror.com/0/testfile';
         text := client.Get(url);
         Browser^.Add(text);
         Browser^.Draw;
+        Win^.Draw;
     end;
 
 end.

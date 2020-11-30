@@ -45,6 +45,40 @@ type
 
 implementation
 
+    { Helper functions }
+
+    (* The idea of this is to replace widely used multibyte characters in UTF8
+       (mostly block drawing stuff, with their nearest equivalent in ANSI rather
+       than just showing an unknown glyph question mark. *)
+    function UTF8Hack(const inputString: RawByteString): AnsiString;
+    begin
+        Result := inputString;
+        Result := Result.Replace(chr($e2) + chr($95) + chr($b1), '/');
+        Result := Result.Replace(chr($e2) + chr($95) + chr($b2), '\');
+        Result := Result.Replace(chr($e2) + chr($96) + chr($80), chr($df));
+        Result := Result.Replace(chr($e2) + chr($96) + chr($84), chr($dc));
+        Result := Result.Replace(chr($e2) + chr($96) + chr($91), chr($b0));
+        Result := Result.Replace(chr($e2) + chr($96) + chr($92), chr($b1));
+        Result := Result.Replace(chr($e2) + chr($96) + chr($93), chr($b2));
+        Result := Result.Replace(chr($e2) + chr($96) + chr($88), chr($db));
+        Result := Result.Replace(chr($e2) + chr($96) + chr($8c), chr($dd));
+        Result := Result.Replace(chr($e2) + chr($96) + chr($96), chr($dd));
+        Result := Result.Replace(chr($e2) + chr($96) + chr($98), chr($dd));
+        Result := Result.Replace(chr($e2) + chr($96) + chr($90), chr($de));
+        Result := Result.Replace(chr($e2) + chr($96) + chr($97), chr($de));
+        Result := Result.Replace(chr($e2) + chr($96) + chr($9c), chr($de));
+        Result := Result.Replace(chr($e2) + chr($96) + chr($9d), chr($de));
+        Result := Result.Replace(chr($e2) + chr($96) + chr($99), chr($db));
+        Result := Result.Replace(chr($e2) + chr($96) + chr($9b), chr($db));
+        Result := Result.Replace(chr($e2) + chr($96) + chr($9c), chr($db));
+        Result := Result.Replace(chr($e2) + chr($96) + chr($9f), chr($db));
+        Result := Result.Replace(chr($e2) + chr($88) + chr($99), chr($f9));
+        Result := Result.Replace(chr($e2) + chr($80) + chr($ba), '>');
+        Result := Result.Replace(chr($c2) + chr($b7), chr($fa));
+    end;
+
+    { TGopherClient }
+
     constructor TGopherClient.Create(LoggerObject: PLogger);
     begin
         Logger := LoggerObject;
@@ -66,7 +100,7 @@ implementation
 
         for I := 0 to Length(Lines) - 1 do
         begin
-            if (Length(Lines) > 2) then
+            if (Length(Lines) > 0) then
             begin
                 if Lines[I] = '.' then Exit; { Single dot marks the end. }
                 MenuItem := ParseMenuItem(Lines[I]);
@@ -174,8 +208,8 @@ implementation
             begin
                 Logger^.Error('Could not connect to host: ' + TokenizedUrl.Host
                     + ' on port ' + IntToStr(TokenizedUrl.Port)
-                    + ' - Error: ' + E. Message);
-                ClientSocket.Free;
+                    + ' - Error: ' + E.Message);
+                if ClientSocket <> nil then ClientSocket.Free;
                 Exit;
             end;
         end;
@@ -201,6 +235,7 @@ implementation
             Result += Part;
             Buf := '';
         end;
+        Result := UTF8Hack(Result);
         Logger^.Debug('Successfully retrieved ' + Url);
         ClientSocket.Free;
         Menu := ParseMenu(Result);

@@ -5,17 +5,22 @@ unit LogWindow;
 interface
 
 uses
-    App,
+
     Logger,
     TurboGopherApplication,
+    TurboGopherWindow,
 
+    App,
     Classes,
+    CustApp,
     Drivers,
     Objects,
     SysUtils,
     Views;
 
 type
+
+    PCustomApplication = ^TCustomApplication;
 
     TLogWidget = object(TScroller)
         constructor Init(
@@ -27,30 +32,36 @@ type
         private
             var Logger: PLogger;
             var Filter: TLogLevelFilter;
+            const defaultAttrs = $1f;
     end;
     PLogWidget = ^TLogWidget;
 
-    TLogWindow = class
+    TLogWindow = class(TTurboGopherWindow)
     public
-        constructor Create(var TheApp: TTurboGopherApplication);
+
+        constructor Init(TheApp: TTurboGopherApplication); virtual;
         procedure OnLogMessage(
             const Message: string;
             const Level: TLogLevel
         );
     private
-        var App: TTurboGopherApplication;
-        LogWidget: TLogWidget;
+        LogWidget: PLogWidget;
         Rect: TRect;
         Win: PWindow;
+        var App: TTurboGopherApplication;
     end;
+    PLogWindow = ^TLogWindow;
 
 implementation
+
+    uses
+        DrawUtils;
 
     { TLogWidget }
 
     constructor TLogWidget.Init(
         LoggerObject: PLogger;
-        Bounds: TRect;
+        Bounds: Objects.TRect;
         AHScrollBar, AVScrollBar: PScrollBar);
     begin
         TScroller.Init(Bounds, AHScrollBar, AVScrollBar);
@@ -82,12 +93,13 @@ implementation
         ToLine := FromLine + Size.Y;
         LogEntries := Logger^.GetRange(FromLine, ToLine, Filter);
 
-        Color := GetColor($FF);
+        Color := defaultAttrs;
         LineCount := Length(LogEntries);
 
         { clear the screen }
         MoveChar(DrawBuffer, ' ', Color, Size.X);
         WriteLine(0, 0, Size.X, Size.Y, DrawBuffer);
+        DrawBuffer := default(TDrawBuffer);
 
         { render characters }
         for L := 0 to LineCount - 1 do
@@ -97,14 +109,22 @@ implementation
             if Length(LogEntry.Message) > LongestLine then
                 LongestLine := Length(LogEntry.Message);
             Str := Copy(LogEntry.Message, Delta.X + 1, Size.X);
-            WriteStr(0, Y, Str, Color);
+            case LogEntry.Level of
+                TLogLevel.debug: Color := (Hi(Color) * 16) + 2;
+                TLogLevel.info: Color := (Hi(Color) * 16) + 15;
+                TLogLevel.warning: Color := (Hi(Color) * 16) + 6;
+                TLogLevel.error: Color := (Hi(Color) * 16) + 12;
+                TLogLevel.fatal: Color := (4 * 16) + 0;
+            end;
+            MoveStr(DrawBuffer, Str, Color);
+            WriteBuf(0, Y, Length(Str), 1, DrawBuffer);
         end;
         SetLimit(LongestLine, Logger^.Count(Filter));
     end;
 
     { TLogWindow }
 
-    constructor TLogWindow.Create(var TheApp: TTurboGopherApplication);
+    constructor TLogWindow.Init(TheApp: TTurboGopherApplication);
     begin
         App := TheApp;
         (* Figure out where we're going to put ourselves - a window height of
@@ -114,20 +134,19 @@ implementation
         Rect.Move(0, -2);         { move up to account for the borders }
         Win := New(PWindow, Init(Rect, 'Log messages', wnNoNumber));
         Desktop^.Insert(Win);
-
         Win^.GetExtent(Rect);
         Rect.Grow(-2, -1);
-        LogWidget.Init(
+        LogWidget := New(PLogWidget, Init(
             App.GetLogger(),
             Rect,
             Win^.StandardScrollBar(sbHorizontal),
             Win^.StandardScrollBar(sbVertical)
-        );
-        Win^.Insert(@LogWidget);
-
+        ));
+        if LogWidget = nil then
+            raise Exception.Create('Could not instantiate log widget.');
+        Win^.Insert(LogWidget);
         (* Register our callback into the logger. *)
         App.GetLogger()^.RegisterCallback(@OnLogMessage);
-
     end;
 
     procedure TLogWindow.OnLogMessage(
@@ -135,7 +154,8 @@ implementation
         const Level: TLogLevel
     );
     begin
-        LogWidget.Draw;
+        LogWidget^.Draw;
+        Win^.Draw;
     end;
 
 end.

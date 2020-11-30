@@ -49,11 +49,11 @@ implementation
 
     uses
         LogWindow,
-        MainWindow;
+        BrowserWindow;
 
     var
         FLogWindow: TLogWindow;
-        FMainWindow: TMainWindow;
+        FBrowserWindow: TBrowserWindow;
 
     { TTGApp }
 
@@ -114,8 +114,8 @@ implementation
       Logger := TLogger.Create;
       FileLogger := TFileLogger.Create(@Logger, '/tmp/turbogopher_debug.txt');
       Client := TGopherClient.Create(@Logger);
-      FLogWindow := TLogWindow.Create(Self);
-      FMainWindow := TMainWindow.Create(Self);
+      FLogWindow := TLogWindow.Init(Self);
+      FBrowserWindow := TBrowserWindow.Create(Self);
     end;
 
     procedure TTurboGopherApplication.DoRun;
@@ -138,7 +138,7 @@ implementation
              Exit;
         end;
         { TEST }
-        FMainWindow.Get;
+        FBrowserWindow.Get('gopher://baud.baby');
         { Run TG app }
         TurboGraphicsApplication.Run;
         { Clean shutdown }
