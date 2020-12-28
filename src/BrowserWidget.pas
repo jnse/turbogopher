@@ -39,6 +39,7 @@ type
         );
         procedure Add(text: string);
         procedure Draw; virtual;
+        procedure Reset;
         private
             App: TTurboGopherApplication;
             Lines: array of TBrowserString;
@@ -758,6 +759,11 @@ begin
         end;
     end;
     SetLimit(LongestLine, LineCount);
+end;
+
+procedure TBrowserWidget.Reset;
+begin
+    SetLength(Lines, 0);
 end;
 
 end.

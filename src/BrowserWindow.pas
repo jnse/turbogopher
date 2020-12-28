@@ -12,7 +12,6 @@ uses
 
     App,
     Classes,
-    CustApp,
     Objects,
     SysUtils,
     Views;
@@ -64,6 +63,7 @@ implementation
     begin
         client := App.GetClient();
         text := client.Get(url);
+        Browser^.Reset();
         Browser^.Add(text);
         Browser^.Draw;
         Win^.Draw;
