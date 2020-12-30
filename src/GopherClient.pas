@@ -16,11 +16,15 @@ uses
 
 type
 
+    PGopherMenuItem = ^TGopherMenuItem;
     TGopherMenuItem = record
         ItemType: char;
         DisplayString: RawByteString;
         SelectorString: RawByteString;
+        Host: RawByteString;
+        Port: RawByteString;
         Valid: Boolean;
+        Source: RawByteString;
     end;
 
     TGopherMenuItems = array of TGopherMenuItem;
@@ -35,10 +39,12 @@ type
     TGopherClient = class
     public
         constructor Create(LoggerObject: PLogger);
-        function Get(Url: string): string;
-        function ParseMenu(const Body: string): TGopherMenuItems;
+        function Get(Url: string): TGopherMenuItems;
+        function ParseMenu(const Body: string; IsMenu: Boolean): TGopherMenuItems;
     private
         Logger: PLogger;
+        CurrentHost: AnsiString;
+        CurrentPort: AnsiString;
         function ParseMenuItem(const ItemLine: RawByteString): TGopherMenuItem;
         function ParseUrl(Url: string): TTokenizedUrl;
     end;
@@ -82,9 +88,11 @@ implementation
     constructor TGopherClient.Create(LoggerObject: PLogger);
     begin
         Logger := LoggerObject;
+        CurrentHost := '';
+        CurrentPort := '';
     end;
 
-    function TGopherClient.ParseMenu(const Body: string): TGopherMenuItems;
+    function TGopherClient.ParseMenu(const Body: string; IsMenu: Boolean): TGopherMenuItems;
     var
         Lines: TStringArray;
         I: SizeInt;
@@ -103,8 +111,15 @@ implementation
             if (Length(Lines) > 0) then
             begin
                 if Lines[I] = '.' then Exit; { Single dot marks the end. }
-                MenuItem := ParseMenuItem(Lines[I]);
-{                if (MenuItem.Valid <> True) then continue;}
+                if IsMenu = True then
+                    MenuItem := ParseMenuItem(Lines[I])
+                else
+                begin
+                    MenuItem.ItemType := 'i';
+                    MenuItem.SelectorString := '';
+                    MenuItem.DisplayString := Lines[I];
+                    MenuItem.Valid := True;
+                end;
                 SetLength(Result, Length(Result) + 1);
                 Result[Length(Result) - 1] := MenuItem;
             end;
@@ -121,37 +136,64 @@ implementation
         Result.ItemType := '3';
         Result.DisplayString := ItemLine;
         Result.SelectorString := '';
+        Result.Host := CurrentHost;
+        Result.Port := CurrentPort;
         Result.Valid := False;
+        Result.Source := ItemLine;
         (* We need at least a first character to get an item type. *)
         if (Length(ParsedItem) < 1) then Exit;
         Result.ItemType := ParsedItem[1];
         ParsedItem := Copy(ParsedItem, 2, Length(ParsedItem) - 1);
+        if ItemLine = ('1Super-Dimensional Fortress: SDF Gopherspace'+Chr(9)+Chr(9)+'sdf.org'+chr(9)+'70') then
+        begin
+            SetLength(Tokens, 0); { break here }
+        end;
         (* Look for the tab character separating display/selector strings.
            Bail if we can't find one. *)
-        tokens := StringSplit(ParsedItem, chr(9), 2);
+        tokens := StringSplit(ParsedItem, chr(9), 2, True);
         if Length(tokens) < 2 then Exit;
-        (* Parse display and selector strings out. *)
+        (* Display string is the first token, the other token has everything else. *)
         Result.DisplayString := Tokens[0];
-        Result.SelectorString := Tokens[1];
+        ParsedItem := Tokens[1];
+        (* If we got here, the result is basically valid, the other fields are
+           optional. We will try to parse out as many as we can. *)
         Result.Valid := True;
+        (* Next up is the selector *)
+        Tokens := StringSplit(ParsedItem, chr(9), 2, True);
+        if Length(tokens) < 1 then Exit;
+        Result.SelectorString := Tokens[0];
+        (* Trim the leading slash if there is one. *)
+        if Result.SelectorString <> '' then
+            Result.SelectorString := LTrim(Result.SelectorString, '/');
+        if Length(tokens) < 2 then Exit;
+        ParsedItem := Tokens[1];
+        (* Next up is the host. *)
+        Tokens := StringSplit(ParsedItem, chr(9), 2, True);
+        if Length(tokens) < 1 then Exit;
+        Result.Host := Tokens[0];
+        if Length(tokens) < 2 then Exit;
+        (* All that's left now should be the port. *)
+        ParsedItem := Tokens[1];
+        Tokens := StringSplit(ParsedItem, chr(9), 2);
+        if Length(tokens) < 1 then
+            Result.Port := ParsedItem
+        else
+            Result.Port := Tokens[0];
+        Result.Port := Trim(Result.Port);
     end;
 
     function TGopherClient.ParseUrl(Url: string): TTokenizedUrl;
     const
-        GopherURI: string = 'gopher://';
         gsPath: string = '/';
         GopherPort: Integer = 70;
     var
-        unparsedPath: AnsiString;
+        unparsedPath, PortStr: AnsiString;
+        PortInt: LongInt;
         re: TRegExpr;
+        ColonPos, PathPos: SizeInt;
     begin
-        if Pos(GopherURI, Url) <> 0 then
-        begin
-            Url := Copy(
-                Url,
-                Pos(GopherURI, Url) + Length(GopherURI), Length(Url)
-            );
-        end;
+        Result.DocumentType := '1'; (* Default unless overridden by url *)
+        Url := LTrim(Url, 'gopher://');
         if Pos(gsPath, Url) = 0 then
         begin
             unparsedPath := gsPath
@@ -159,45 +201,54 @@ implementation
         begin
             unparsedPath := Copy(Url, Pos(gsPath, Url), Length(Url))
         end;
-        if Pos(':', Url) = 0 then
+        ColonPos := Pos(':', Url);
+        if ColonPos = 0 then
         begin
-          if Pos(gsPath, Url) = 0 then
-          begin
-              Result.Host := Copy(Url, 1, Length(Url))
-          end else
-          begin
-              Result.Host := Copy(Url, 1, Pos(gsPath, Url) - 1)
-          end;
-          Result.Port := GopherPort
-      end else
-      begin
-          Result.Host := Copy(Url, 1, Pos(':', Url) - 1);
-          Result.Port := StrToInt(
-              Copy(Url, Pos(':', Url) + 1, Pos(gsPath, Url) - 1)
-          );
-      end;
-      if Length(unparsedPath) = 0 then Exit;
-      unparsedPath := ReplaceRegExpr('/+', unparsedPath, '/', True);
-      re := TRegExpr.Create('^/?(.)/(.*)');
-      if re.Exec(unparsedPath) then
-      begin
-          Result.DocumentType := re.Match[1];
-          Result.Path := '/' + re.Match[2];
-      end;
+            (* No port specified? *)
+            if Pos(gsPath, Url) = 0 then
+                Result.Host := Copy(Url, 1, Length(Url))
+            else
+                Result.Host := Copy(Url, 1, Pos(gsPath, Url) - 1);
+            Result.Port := GopherPort
+        end else
+        begin
+            (* Port specified. *)
+            Result.Host := Copy(Url, 1, ColonPos - 1);
+            PathPos := Pos(gsPath, Url) - 1;
+            if PathPos = 0 then PathPos := Length(Url) - 1;
+            PortStr := Copy(Url, ColonPos + 1, PathPos - ColonPos);
+            if TryStrToInt(PortStr, PortInt) <> True then
+            begin
+                Logger^.Warning('Could not parse gopher port: ' + PortStr);
+                Result.Port := GopherPort;
+            end
+            else
+                Result.Port := PortInt;
+        end;
+        if Length(unparsedPath) = 0 then Exit;
+        unparsedPath := ReplaceRegExpr('/+', unparsedPath, '/', True);
+        re := TRegExpr.Create('^/?(.)/(.*)');
+        if re.Exec(unparsedPath) then
+        begin
+            Result.DocumentType := re.Match[1];
+            Result.Path := '/' + re.Match[2];
+        end;
     end;
 
-    function TGopherClient.Get(Url: String): String;
+    function TGopherClient.Get(Url: String): TGopherMenuItems;
     var
         TokenizedUrl: TTokenizedUrl;
         ClientSocket: TSocketStream;
+        ResultStr: AnsiString = '';
         RequestStr: string = '';
         Part: string = '';
         Buf: array[0..4095] of Char = '';
         Count: Integer = 4094;
+        IsMenu: Boolean = False;
         ReadResult: LongInt = 1;
         Menu: TGopherMenuItems;
-        I: SizeInt;
     begin
+        ResultStr := '';
         TokenizedUrl := ParseUrl(Url);
         try
            ClientSocket := TInetSocket.Create(
@@ -206,16 +257,18 @@ implementation
         except
             on E: Exception do
             begin
+                CurrentHost := '';
+                CurrentPort := '';
                 Logger^.Error('Could not connect to host: ' + TokenizedUrl.Host
                     + ' on port ' + IntToStr(TokenizedUrl.Port)
                     + ' - Error: ' + E.Message);
-                if ClientSocket <> nil then ClientSocket.Free;
                 Exit;
             end;
         end;
+        CurrentHost := TokenizedUrl.Host;
+        CurrentPort := IntToStr(TokenizedUrl.Port);
         RequestStr := TokenizedUrl.Path + #13#10;
         ClientSocket.Write(RequestStr[1], Length(RequestStr));
-        Result := '';
         while (ReadResult > 0) do
         begin
             try
@@ -223,31 +276,30 @@ implementation
             except
                 on E: ESocketError do
                 begin
-                    Result += ' | Error while reading from host: ' + TokenizedUrl.Host;
-                    Result += ' on port ' + IntToStr(TokenizedUrl.Port);
-                    Result += ' - Error: ' + E. Message;
+                    Logger^.Error(
+                        ' | Error while reading from host: ' + TokenizedUrl.Host
+                        + ' on port ' + IntToStr(TokenizedUrl.Port)
+                        + ' - Error: ' + E. Message
+                    );
                     ClientSocket.Free;
                     Exit;
                 end;
             end;
             if ReadResult = 0 then break;
             Part := Copy(Buf, 0, ReadResult);
-            Result += Part;
+            ResultStr += Part;
             Buf := '';
         end;
-        Result := UTF8Hack(Result);
+        ResultStr := UTF8Hack(ResultStr);
         Logger^.Debug('Successfully retrieved ' + Url);
         ClientSocket.Free;
-        Menu := ParseMenu(Result);
+        if TokenizedUrl.DocumentType = '1' then IsMenu := True;
+        Menu := ParseMenu(ResultStr, IsMenu);
         if (Length(menu) = 0) then
         begin
-            Logger^.Error('Could not parse server response as menu: ' + Result);
+            Logger^.Error('Could not parse server response as menu: ' + ResultStr);
         end;
-        Result := '';
-        for I := 0 to Length(Menu) - 1 do
-        begin
-            Result += Menu[I].DisplayString + chr(10);
-        end;
+        Result := Menu;
     end;
 
 end.

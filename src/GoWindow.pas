@@ -85,8 +85,6 @@ end;
 (* TGoWindow *)
 
 constructor TGoWindow.Create(var TheApp: TTurboGopherApplication);
-var
-    TmpRect: TRect;
 begin
     App := TheApp;
     (* Create and center window. *)

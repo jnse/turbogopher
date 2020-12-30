@@ -29,7 +29,9 @@ type
             AHScrollBar, AVScrollBar: PScrollBar
         );
         procedure Draw; virtual;
+        procedure ScrollToBottom;
         private
+            var LineCount: SizeInt;
             var Logger: PLogger;
             var Filter: TLogLevelFilter;
             const defaultAttrs = $1f;
@@ -64,6 +66,7 @@ implementation
         Bounds: Objects.TRect;
         AHScrollBar, AVScrollBar: PScrollBar);
     begin
+        LineCount := 0;
         TScroller.Init(Bounds, AHScrollBar, AVScrollBar);
         GrowMode := gfGrowHiX + gfGrowHiY;
         SetLimit(Bounds.B.X, Bounds.B.Y);
@@ -81,7 +84,7 @@ implementation
     var
       Color: Byte;
       DrawBuffer: TDrawBuffer;
-      L, Y, LineCount, LongestLine, FromLine, ToLine: SizeInt;
+      L, Y, LongestLine, FromLine, ToLine: SizeInt;
       LogEntries: TLogMessages;
       LogEntry: TLogMessage;
       Str: string;
@@ -122,6 +125,12 @@ implementation
         SetLimit(LongestLine, Logger^.Count(Filter));
     end;
 
+    procedure TLogWidget.ScrollToBottom;
+    begin
+        ScrollTo(0, LineCount);
+        Draw;
+    end;
+
     { TLogWindow }
 
     constructor TLogWindow.Init(TheApp: TTurboGopherApplication);
@@ -154,6 +163,7 @@ implementation
         const Level: TLogLevel
     );
     begin
+        LogWidget^.ScrollToBottom;
         LogWidget^.Draw;
         Win^.Draw;
     end;

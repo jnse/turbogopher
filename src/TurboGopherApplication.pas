@@ -78,9 +78,9 @@ implementation
                     cmGo:
                     begin
                         FGoWindow.Show();
+                        ClearEvent(Event);
                     end;
             end;
-            ClearEvent(Event);
         end;
 
     procedure TTGApp.InitStatusLine;

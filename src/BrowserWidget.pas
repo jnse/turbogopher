@@ -7,10 +7,10 @@ interface
 uses
     DrawUtils,
     Logger,
+    SideBarWidget,
     TurboGopherApplication,
 
     Classes,
-    CustApp,
     Drivers,
     Objects,
     Regexpr,
@@ -34,6 +34,7 @@ type
     TBrowserWidget = object(TScroller)
         constructor Init(
             var TheApp: TTurboGopherApplication;
+            SideBarWidget: PSideBarWidget;
             Bounds: TRect;
             AHScrollBar, AVScrollBar: PScrollBar
         );
@@ -45,6 +46,7 @@ type
             Lines: array of TBrowserString;
             CurrentForegroundColor: byte;
             CurrentBackgroundColor: byte;
+            SideBar: PSideBarWidget;
             const defaultAttrs = $1f;
 
     end;
@@ -583,12 +585,14 @@ end;
 
 constructor TBrowserWidget.Init(
             var TheApp: TTurboGopherApplication;
+            SideBarWidget: PSideBarWidget;
             Bounds: TRect;
             AHScrollBar, AVScrollBar: PScrollBar
         );
 begin
     TScroller.Init(Bounds, AHScrollBar, AVScrollBar);
     App := TheApp;
+    SideBar := SideBarWidget;
     CurrentForegroundColor := Hi(defaultAttrs);
     CurrentBackgroundColor := Lo(defaultAttrs);
     GrowMode := gfGrowHiX + gfGrowHiY;
@@ -623,6 +627,7 @@ begin
         (* If the character is a new line, allocate a new line and save the
            previous one. *)
         CC := text[I + 1];
+
         if (ord(CC) = 10) or (ord(CC) = 13) then
         begin
             (* If the previous character was a <CR> and the current character is
@@ -636,6 +641,7 @@ begin
             PC := CC;
             continue;
         end;
+
         (* Parse CSI escapes. *)
         if CsiStage <> TCsiParseStage.None then
         begin
@@ -718,11 +724,8 @@ begin
         PC := CC;
     end;
     { add the line to our lines array. }
-    if (Line <> nil) then
-    begin
-        SetLength(Lines, Length(Lines) + 1);
-        Lines[Length(Lines) - 1] := Line;
-    end;
+    SetLength(Lines, Length(Lines) + 1);
+    Lines[Length(Lines) - 1] := Line;
 end;
 
 procedure TBrowserWidget.Draw;
@@ -731,7 +734,11 @@ var
   DrawBuffer: TDrawBuffer;
   DrawBufferIndex, X, Y, LineCount, LongestLine: SizeInt;
   C: TBrowserCharacter;
+  Rect: TRect;
 begin
+    GetBounds(Rect);
+    SideBar^.SetDelta(Delta.Y);
+    SideBar^.Draw;
     DrawBuffer := default(TDrawBuffer);
     DrawBufferIndex := 0;
     LongestLine := 0;
@@ -741,7 +748,7 @@ begin
     WriteLine(0, 0, Size.X, Size.Y, DrawBuffer);
     DrawBuffer := default(TDrawBuffer);
     { render characters }
-    for Y := Delta.Y to Length(Lines) - 1 - Delta.Y do
+    for Y := 0 to Rect.B.Y do
     begin
         I := Delta.Y + Y;
         if (I < LineCount) and (Lines[I] <> nil) then
@@ -754,7 +761,7 @@ begin
                 SetInDrawBuf(DrawBuffer, C.character, C.attributes, DrawBufferIndex);
                 DrawBufferIndex += 1;
             end;
-            WriteBuf(0, Y - Delta.Y, DrawBufferIndex, 1, DrawBuffer);
+            WriteBuf(0, Y, DrawBufferIndex, 1, DrawBuffer);
             DrawBufferIndex := 0;
         end;
     end;

@@ -20,6 +20,8 @@ procedure SetInDrawBuf(
     attributes: Byte;
     position: SizeInt);
 
+procedure InvertColor(var attributes: Byte);
+
 implementation
 
 procedure AddToDrawBuf(
@@ -41,6 +43,15 @@ procedure SetInDrawBuf(
     position: SizeInt);
 begin
     buffer[position] := (attributes * 256) + Byte(character);
+end;
+
+procedure InvertColor(var attributes: Byte);
+var
+    bg, fg : Byte;
+begin
+    bg := Hi(attributes);
+    fg := Lo(attributes);
+    attributes := (fg * 16) + bg;
 end;
 
 end.
