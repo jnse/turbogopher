@@ -26,6 +26,9 @@ DOS?), but I haven't tried yet at the time of writing.
 # What's it look like?
 
 It looks like a typical TurboVision app!
+
+![screenshot](./screenshot.png)
+
 [![Here's a video](http://linkerror.com/stuff/turbogopher3.mpg)](http://linkerror.com/stuff/turbogopher3.mpg)
 
 # How do I use it?
