@@ -42,13 +42,31 @@ So far, the following keyboard shortcuts are supported:
 * Alt+left - Back.
 * Alt+right - Forward.
 
+# How do i build & run it
+
+At the time of writing, I still have to put up a build toolchain with proper build scripts
+and such for building outside of Lazarus.
+
+So to build it right now, you have to open the turbogopher.lpi file with lazarus and build with shift+f9
+This should produce an executable in the project root directory that you can run from a terminal.
+Don't run it from within lazarus, because it doesn't know how to handle console stuff.
+
+# FILES
+
+The only relevant file right now is /tmp/turbogopher_debug.txt which should contain the last
+log line (for debugging) - this will go away / be configurable eventually.
+
 # TODO
 
 (very) basic browsing works, but a lot of work is left:
 
-* Opening non-text links and associated mime type handling.
-* Opening search links / stuff that takes user input.
-* A lot of configuration dialogs to allow configuration of keybindings, colors, logfile, loglevel, etc,...
-* Better UTF-8 to Ansi conversion.
-* ... stuff?
+* (essential) Opening non-text links and associated mime type handling.
+* (essential) Opening search links / stuff that takes user input.
+* (feature) A lot of configuration dialogs to allow configuration of keybindings, colors, logfile, loglevel, etc,...
+* (improvement) Better UTF-8 to Ansi conversion.
+* (essential) Add make scripts for people to build this without lazarus. Add packaging stuff, release pipeline stuff.
+* (FV bug?) Application does not resize when terminal is resized.
+* (feature) History menu and/or window.
+* (feature) ability to download/save pages.
+
 

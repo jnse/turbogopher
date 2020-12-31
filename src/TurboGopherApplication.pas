@@ -18,6 +18,7 @@ uses
   GopherClient;
 
 const cmGo = 1000;
+const cmNewBrowser = 1001;
 
 type
 
@@ -26,8 +27,11 @@ type
         procedure HandleEvent(var Event: TEvent); virtual;
         procedure InitStatusLine; virtual;
         procedure InitMenuBar; virtual;
+        private
+            WindowMenu: PMenu;
     end;
 
+    PTurboGopherApplication = ^TTurboGopherApplication;
     TTurboGopherApplication = class(TCustomApplication)
     public
         constructor Create(TheOwner: TComponent); override;
@@ -48,8 +52,6 @@ type
         FileLogger: TFileLogger;
     end;
 
-    PTurboGopherApplication = ^TTurboGopherApplication;
-
 implementation
 
     uses
@@ -58,6 +60,7 @@ implementation
         GoWindow;
 
     var
+        FApplication: PTurboGopherApplication = nil;
         FLogWindow: TLogWindow;
         FGoWindow: TGoWindow;
         FBrowserWindows: array of TBrowserWindow;
@@ -79,6 +82,13 @@ implementation
                     begin
                         FGoWindow.Show();
                         ClearEvent(Event);
+                    end;
+                    cmNewBrowser:
+                    begin
+                        if FApplication <> nil then
+                        begin
+                             FApplication^.CreateBrowserWindow;
+                        end;
                     end;
             end;
         end;
@@ -110,6 +120,9 @@ implementation
         Rect := default(Objects.TRect);
         GetExtent(Rect);
         Rect.B.Y := Rect.A.Y + 1;
+        WindowMenu := NewMenu(
+            NewItem('~N~ew browser window', 'Ctrl-T', kbCtrlT, cmNewBrowser, hcNoContext, nil)
+        );
         MenuBar := New(
             PMenuBar,
             Init(
@@ -122,7 +135,8 @@ implementation
                         NewSubMenu('~B~rowse', hcNoContext,
                             NewMenu(
                                 NewItem('~G~o', 'Alt-G', kbAltG, cmGo, hcNoContext, nil)
-                            ), nil
+                            ),
+                            NewSubMenu('~W~indow', hcNoContext, WindowMenu, nil)
                         )
                     )   
                 )   
@@ -134,16 +148,16 @@ implementation
 
     constructor TTurboGopherApplication.Create(TheOwner: TComponent);
     begin
-      inherited Create(TheOwner);
-      ActiveBrowserWindow := 0;
-      StopOnException := True;
-      TurboGraphicsApplication.Init;
-      Logger := TLogger.Create;
-      FileLogger := TFileLogger.Create(@Logger, '/tmp/turbogopher_debug.txt');
-      Client := TGopherClient.Create(@Logger);
-      FLogWindow := TLogWindow.Init(Self);
-      FGoWindow := TGoWindow.Create(Self);
-      CreateBrowserWindow;
+        inherited Create(TheOwner);
+        ActiveBrowserWindow := 0;
+        StopOnException := True;
+        TurboGraphicsApplication.Init;
+        Logger := TLogger.Create;
+        FileLogger := TFileLogger.Create(@Logger, '/tmp/turbogopher_debug.txt');
+        Client := TGopherClient.Create(@Logger);
+        FLogWindow := TLogWindow.Init(Self);
+        FGoWindow := TGoWindow.Create(Self);
+        CreateBrowserWindow;
     end;
 
     procedure TTurboGopherApplication.CreateBrowserWindow;
@@ -157,6 +171,7 @@ implementation
     var
         ErrorMsg: String;
     begin
+        FApplication := @Self;
         { quick check parameters }
         ErrorMsg:=CheckOptions('h', 'help');
         if ErrorMsg<>'' then
@@ -220,8 +235,7 @@ implementation
 
     procedure TTurboGopherApplication.WriteHelp;
     begin
-      { add your help code here }
-      writeln('Usage: ', ExeName, ' -h');
+        writeln('Usage: ', ExeName, ' -h');
     end;
 
 end.
