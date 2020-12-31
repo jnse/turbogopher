@@ -7,8 +7,8 @@ Uses
 cthreads,
   {$ENDIF}{$ENDIF}
 Classes,
-SysUtils,
 CustApp,
+SysUtils,
 TurboGopherApplication;
 
 Var

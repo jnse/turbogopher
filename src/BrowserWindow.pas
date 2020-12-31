@@ -24,9 +24,11 @@ type
     PBrowserView = ^TBrowserView;
     TBrowserView = object(TWindow)
         constructor Init(var TheApp: TTurboGopherApplication; Rect: TRect);
-        procedure Get(url: AnsiString);
         procedure AppendHistory(url: AnsiString);
+        procedure Get(url: AnsiString);
+        function GetCaption: AnsiString;
         procedure HandleEvent(var Event: TEvent); virtual;
+        procedure SetCaption(NewTitle: AnsiString);
         var
             App: TTurboGopherApplication;
             Browser: PBrowserWidget;
@@ -41,6 +43,8 @@ type
         constructor Create(var TheApp: TTurboGopherApplication);
         procedure Get(url: AnsiString);
         function GetHistory: TStringArray;
+        function GetTitle: AnsiString;
+        procedure SetTitle(NewTitle: AnsiString);
     private
         Rect: TRect;
         Win: PBrowserView;
@@ -82,8 +86,11 @@ procedure TBrowserView.AppendHistory(url: AnsiString);
 var I : SizeInt;
 begin
     InsertAt(History, url, HistoryIndex + 1);
-    for I := 0 to Length(History) - 1 do
-        App.GetLogger^.Debug('History[' + IntToStr(I) + '] = ' + History[I]);
+end;
+
+function TBrowserView.GetCaption: AnsiString;
+begin
+    Result := GetTitle(255);
 end;
 
 procedure TBrowserView.HandleEvent(var Event: TEvent);
@@ -104,7 +111,6 @@ begin
                     begin
                         HistoryIndex := HistoryIndex - 1;
                         Get(History[HistoryIndex]);
-                        App.GetLogger^.Debug('History index = ' + IntToStr(HistoryIndex));
                     end;
                 end;
                 kbAltRight:
@@ -113,7 +119,6 @@ begin
                     begin
                         HistoryIndex := HistoryIndex + 1;
                         Get(History[HistoryIndex]);
-                        App.GetLogger^.Debug('History index = ' + IntToStr(HistoryIndex));
                     end;
                 end;
                 kbAltUp:
@@ -139,7 +144,6 @@ begin
                         Get(Url);
                         AppendHistory(Url);
                         HistoryIndex := HistoryIndex + 1;
-                        App.GetLogger^.Debug('History index = ' + IntToStr(HistoryIndex));
                     end;
                 end;
                 kbUp:
@@ -197,8 +201,19 @@ begin
             Browser^.Add(MenuItems[I].DisplayString);
         end;
         SideBar^.SetItems(MenuItems);
-        Draw;
+        SetCaption(url);
     end;
+end;
+
+procedure TBrowserView.SetCaption(NewTitle: AnsiString);
+var
+    C, L: SizeInt;
+    TmpTitle: ShortString;
+begin
+    TmpTitle := NewTitle; (* Cast by assigning to temp. This will truncate to 255 chars. *)
+    DisposeStr(Title);
+    Title := NewStr(TmpTitle);
+    Draw;
 end;
 
 { TBrowserWindow }
@@ -227,6 +242,16 @@ end;
 function TBrowserWindow.GetHistory: TStringArray;
 begin
     Result := Win^.History;
+end;
+
+function TBrowserWindow.GetTitle: AnsiString;
+begin
+    Result := Win^.GetCaption;
+end;
+
+procedure TBrowserWindow.SetTitle(NewTitle: AnsiString);
+begin
+    Win^.SetCaption(NewTitle);
 end;
 
 end.

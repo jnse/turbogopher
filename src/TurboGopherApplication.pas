@@ -5,20 +5,22 @@ unit TurboGopherApplication;
 interface
 
 uses
-  App,
-  Objects,
-  Classes,
-  CustApp,
-  Drivers,
-  FileLogger,
-  Logger,
-  Views,
-  Menus,
-  SysUtils,
-  GopherClient;
+    FileLogger,
+    GopherClient,
+    Logger,
 
-const cmGo = 1000;
-const cmNewBrowser = 1001;
+    App,
+    Objects,
+    Classes,
+    CustApp,
+    Drivers,
+    Views,
+    Menus,
+    SysUtils;
+
+const
+    cmGo = 1000;
+    cmNewBrowser = 1001;
 
 type
 
@@ -37,6 +39,7 @@ type
         constructor Create(TheOwner: TComponent); override;
         destructor Destroy; override;
         procedure CreateBrowserWindow;
+        procedure Draw;
         function GetClient(): TGopherClient;
         procedure GetExtent(var Extent: Objects.TRect);
         function GetLogger(): PLogger;
@@ -57,14 +60,14 @@ implementation
     uses
         LogWindow,
         BrowserWindow,
+        BrowserWindowFactory,
         GoWindow;
 
     var
         FApplication: PTurboGopherApplication = nil;
         FLogWindow: TLogWindow;
         FGoWindow: TGoWindow;
-        FBrowserWindows: array of TBrowserWindow;
-        ActiveBrowserWindow: SizeInt;
+        FBrowserWindowFactory: TBrowserWindowFactory;
 
     { TTGApp }
 
@@ -149,22 +152,24 @@ implementation
     constructor TTurboGopherApplication.Create(TheOwner: TComponent);
     begin
         inherited Create(TheOwner);
-        ActiveBrowserWindow := 0;
         StopOnException := True;
         TurboGraphicsApplication.Init;
         Logger := TLogger.Create;
         FileLogger := TFileLogger.Create(@Logger, '/tmp/turbogopher_debug.txt');
+        FBrowserWindowFactory := TBrowserWindowFactory.Create(Self);
         Client := TGopherClient.Create(@Logger);
         FLogWindow := TLogWindow.Init(Self);
         FGoWindow := TGoWindow.Create(Self);
-        CreateBrowserWindow;
     end;
 
     procedure TTurboGopherApplication.CreateBrowserWindow;
     begin
-        SetLength(FBrowserWindows, Length(FBrowserWindows) + 1);
-        FBrowserWindows[Length(FBrowserWindows) -1] := TBrowserWindow.Create(Self);
-        ActiveBrowserWindow := Length(FBrowserWindows);
+        FBrowserWindowFactory.NewBrowser;
+    end;
+
+    procedure TTurboGopherApplication.Draw;
+    begin
+        TurboGraphicsApplication.Draw;
     end;
 
     procedure TTurboGopherApplication.DoRun;
@@ -188,9 +193,15 @@ implementation
              Exit;
         end;
         { Run TG app }
+        CreateBrowserWindow;
         TurboGraphicsApplication.Run;
         { Clean shutdown }
-        TurboGraphicsApplication.Done;
+        try
+            TurboGraphicsApplication.Done;
+        except
+            on E: Exception do
+                Writeln('Clean shutdown failed.');
+        end;
         Terminate;
     end;
 
@@ -215,17 +226,15 @@ implementation
     end;
 
     procedure TTurboGopherApplication.Go(Url: AnsiString);
+    var Browser: PBrowserWindow;
     begin
-        if (Length(FBrowserWindows) < 1) then
+        Browser := FBrowserWindowFactory.GetActive;
+        if (Browser = nil) then
         begin
              Logger.Error('No browser window open.');
              Exit;
         end;
-        if (ActiveBrowserWindow > Length(FBrowserWindows)) then
-        begin
-             ActiveBrowserWindow := Length(FBrowserWindows);
-        end;
-        FBrowserWindows[ActiveBrowserWindow - 1].Get(Url);
+        Browser^.Get(Url);
     end;
 
     function TTurboGopherApplication.ValidView(P: PView) : PView;
