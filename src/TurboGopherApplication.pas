@@ -38,12 +38,14 @@ type
     public
         constructor Create(TheOwner: TComponent); override;
         destructor Destroy; override;
+        procedure CloseBrowserWindow(WindowNumber: Integer);
         procedure CreateBrowserWindow;
         procedure Draw;
         function GetClient(): TGopherClient;
         procedure GetExtent(var Extent: Objects.TRect);
         function GetLogger(): PLogger;
         procedure Go(Url: AnsiString);
+        procedure SetActiveBrowserWindow(WindowNumber: Integer);
         function ValidView(P: PView): PView;
         procedure WriteHelp; virtual;
     protected
@@ -64,6 +66,7 @@ implementation
         GoWindow;
 
     var
+        FLogger: PLogger = nil;
         FApplication: PTurboGopherApplication = nil;
         FLogWindow: TLogWindow;
         FGoWindow: TGoWindow;
@@ -77,9 +80,18 @@ implementation
     end;
 
     procedure TTGApp.HandleEvent(var Event: TEvent);
-        begin
-            inherited HandleEvent(Event);
-            if Event.What = evCommand then
+    begin
+        inherited HandleEvent(Event);
+        case Event.What of
+            evBroadcast:
+            begin
+                {
+                if FLogger <> nil then
+                    FLogger^.Debug('APP Received broadcast: ' + IntToStr(Event.Command));
+                }
+            end;
+            evCommand:
+            begin
                 case Event.Command of
                     cmGo:
                     begin
@@ -93,8 +105,22 @@ implementation
                              FApplication^.CreateBrowserWindow;
                         end;
                     end;
+                    cmCloseAll:
+                    begin
+                        FBrowserWindowFactory.CloseAll;
+                    end;
+                    cmCascade:
+                    begin
+                        FLogger^.Debug('Received cascade');
+                    end;
+                    cmTile:
+                    begin
+                        FLogger^.Debug('Received tile');
+                    end;
+                end;
             end;
         end;
+    end;
 
     procedure TTGApp.InitStatusLine;
     var
@@ -124,7 +150,8 @@ implementation
         GetExtent(Rect);
         Rect.B.Y := Rect.A.Y + 1;
         WindowMenu := NewMenu(
-            NewItem('~N~ew browser window', 'Ctrl-T', kbCtrlT, cmNewBrowser, hcNoContext, nil)
+            NewItem('~N~ew browser window', 'Ctrl-T', kbCtrlT, cmNewBrowser, hcNoContext,
+                StdWindowMenuItems(nil))
         );
         MenuBar := New(
             PMenuBar,
@@ -155,6 +182,7 @@ implementation
         StopOnException := True;
         TurboGraphicsApplication.Init;
         Logger := TLogger.Create;
+        FLogger := @Logger;
         FileLogger := TFileLogger.Create(@Logger, '/tmp/turbogopher_debug.txt');
         FBrowserWindowFactory := TBrowserWindowFactory.Create(Self);
         Client := TGopherClient.Create(@Logger);
@@ -162,9 +190,16 @@ implementation
         FGoWindow := TGoWindow.Create(Self);
     end;
 
+    procedure TTurboGopherApplication.CloseBrowserWindow(WindowNumber: Integer);
+    begin
+        FBrowserWindowFactory.CloseBrowserWindow(WindowNumber);
+    end;
+
     procedure TTurboGopherApplication.CreateBrowserWindow;
     begin
         FBrowserWindowFactory.NewBrowser;
+        if TurboGraphicsApplication.WindowMenu = nil then Exit;
+
     end;
 
     procedure TTurboGopherApplication.Draw;
@@ -226,15 +261,23 @@ implementation
     end;
 
     procedure TTurboGopherApplication.Go(Url: AnsiString);
-    var Browser: PBrowserWindow;
+    var Browser: TBrowserWindow;
     begin
-        Browser := FBrowserWindowFactory.GetActive;
-        if (Browser = nil) then
-        begin
-             Logger.Error('No browser window open.');
-             Exit;
+        try
+            FBrowserWindowFactory.GetActive(Browser);
+        except
+            on E: Exception do
+            begin
+                Logger.Error(E.Message);
+                Exit;
+            end;
         end;
-        Browser^.Get(Url);
+        Browser.Get(Url);
+    end;
+
+    procedure TTurboGopherApplication.SetActiveBrowserWindow(WindowNumber: Integer);
+    begin
+        FBrowserWindowFactory.SetActive(WindowNumber);
     end;
 
     function TTurboGopherApplication.ValidView(P: PView) : PView;

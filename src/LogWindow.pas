@@ -127,7 +127,7 @@ implementation
 
     procedure TLogWidget.ScrollToBottom;
     begin
-        ScrollTo(0, LineCount);
+        ScrollTo(0, 1000000);
         Draw;
     end;
 

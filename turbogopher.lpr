@@ -1,6 +1,7 @@
 Program turbogopher;
 
-{$mode objfpc}{$H+}
+{$mode objfpc}
+{$H+}
 
 Uses
   {$IFDEF UNIX}{$IFDEF UseCThreads}

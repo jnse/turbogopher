@@ -25,6 +25,8 @@ type
     TBrowserView = object(TWindow)
         constructor Init(var TheApp: TTurboGopherApplication; Rect: TRect);
         procedure AppendHistory(url: AnsiString);
+        procedure Close; virtual;
+        procedure CloseReal;
         procedure Get(url: AnsiString);
         function GetCaption: AnsiString;
         procedure HandleEvent(var Event: TEvent); virtual;
@@ -41,9 +43,12 @@ type
     TBrowserWindow = class(TTurboGopherWindow)
     public
         constructor Create(var TheApp: TTurboGopherApplication);
+        procedure Close;
         procedure Get(url: AnsiString);
         function GetHistory: TStringArray;
+        function GetNumber: Integer;
         function GetTitle: AnsiString;
+        procedure SetNumber(NewNumber: Integer);
         procedure SetTitle(NewTitle: AnsiString);
     private
         Rect: TRect;
@@ -58,6 +63,7 @@ implementation
 constructor TBrowserView.Init(var TheApp: TTurboGopherApplication; Rect: TRect);
 begin
     inherited Init(Rect, 'TurboGopher!', wnNoNumber);
+    Self.Flags := Self.Flags or ofTileable;
     App := TheApp;
     HistoryIndex := 0;
     (* Create sidebar widget *)
@@ -83,9 +89,18 @@ begin
 end;
 
 procedure TBrowserView.AppendHistory(url: AnsiString);
-var I : SizeInt;
 begin
     InsertAt(History, url, HistoryIndex + 1);
+end;
+
+procedure TBrowserView.Close;
+begin
+    App.CloseBrowserWindow(Number);
+end;
+
+procedure TBrowserView.CloseReal;
+begin
+    inherited Close;
 end;
 
 function TBrowserView.GetCaption: AnsiString;
@@ -100,8 +115,17 @@ var
     Url: AnsiString = '';
 begin
     Bounds := Default(TRect);
-    inherited HandleEvent(Event);
     case Event.What of
+        evBroadcast:
+        begin
+            {App.GetLogger^.Debug('Received broadcast: ' + IntToStr(Event.Command));}
+            case Event.Command of
+                cmReceivedFocus:
+                begin
+                    App.SetActiveBrowserWindow(Number);
+                end;
+            end;
+        end;
         evKeyDown:
         begin
             case Event.KeyCode of
@@ -178,8 +202,11 @@ begin
                     Browser^.ScrollTo(Browser^.Delta.X, Browser^.Delta.Y + (Bounds.B.Y - 2));
                     ClearEvent(Event);
                 end;
-
             end;
+        end
+        else
+        begin
+            inherited HandleEvent(Event);
         end;
     end;
 end;
@@ -201,7 +228,7 @@ begin
             Browser^.Add(MenuItems[I].DisplayString);
         end;
         SideBar^.SetItems(MenuItems);
-        SetCaption(url);
+        SetCaption(IntToStr(Number) + ': ' + url);
     end;
 end;
 
@@ -232,6 +259,11 @@ begin
     end;
 end;
 
+procedure TBrowserWindow.Close;
+begin
+    Win^.CloseReal;
+end;
+
 procedure TBrowserWindow.Get(url: AnsiString);
 begin
     Win^.Get(url);
@@ -244,9 +276,19 @@ begin
     Result := Win^.History;
 end;
 
+function TBrowserWindow.GetNumber: Integer;
+begin
+    Result := Win^.Number;
+end;
+
 function TBrowserWindow.GetTitle: AnsiString;
 begin
     Result := Win^.GetCaption;
+end;
+
+procedure TBrowserWindow.SetNumber(NewNumber: Integer);
+begin
+    Win^.Number := NewNumber;
 end;
 
 procedure TBrowserWindow.SetTitle(NewTitle: AnsiString);
