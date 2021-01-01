@@ -114,6 +114,7 @@ var
     SelectedItem: PGopherMenuItem = nil;
     Url: AnsiString = '';
 begin
+    inherited HandleEvent(Event);
     Bounds := Default(TRect);
     case Event.What of
         evBroadcast:
@@ -203,10 +204,6 @@ begin
                     ClearEvent(Event);
                 end;
             end;
-        end
-        else
-        begin
-            inherited HandleEvent(Event);
         end;
     end;
 end;
