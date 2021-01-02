@@ -263,6 +263,7 @@ implementation
     procedure TTurboGopherApplication.Go(Url: AnsiString);
     var Browser: TBrowserWindow;
     begin
+        Browser := default(TBrowserWindow);
         try
             FBrowserWindowFactory.GetActive(Browser);
         except

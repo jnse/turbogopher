@@ -115,6 +115,7 @@ begin
     for L := 0 to Rect.B.Y do
     begin
         Entry := '   ';
+        Color := defaultBackgroundAttrs;
         I := Delta + L;
         Selectable := False;
         if I < Length(Items) then

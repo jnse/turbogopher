@@ -27,9 +27,11 @@ type
         procedure AppendHistory(url: AnsiString);
         procedure Close; virtual;
         procedure CloseReal;
+        procedure Draw; virtual;
         procedure Get(url: AnsiString);
         function GetCaption: AnsiString;
         procedure HandleEvent(var Event: TEvent); virtual;
+        procedure PositionWidgets;
         procedure SetCaption(NewTitle: AnsiString);
         var
             App: TTurboGopherApplication;
@@ -76,7 +78,7 @@ begin
     Insert(SideBar);
     (* Create browser widget *)
     GetClipRect(Rect);
-    Rect.Grow(-8, -1);
+    Rect.Grow(-3, -1);
     Rect.Move(2, 0);
     Browser := New(PBrowserWidget, Init(
         TheApp,
@@ -86,6 +88,7 @@ begin
         StandardScrollBar(sbVertical)
     ));
     Insert(Browser);
+    PositionWidgets;
 end;
 
 procedure TBrowserView.AppendHistory(url: AnsiString);
@@ -101,6 +104,12 @@ end;
 procedure TBrowserView.CloseReal;
 begin
     inherited Close;
+end;
+
+procedure TBrowserView.Draw;
+begin
+    PositionWidgets;
+    inherited Draw;
 end;
 
 function TBrowserView.GetCaption: AnsiString;
@@ -229,9 +238,27 @@ begin
     end;
 end;
 
+procedure TBrowserView.PositionWidgets;
+var
+    WinRect, BrowserRect, SidebarRect : TRect;
+begin
+    WinRect := default(TRect);
+    BrowserRect := default(TRect);
+    SidebarRect := default(TRect);
+    GetBounds(WinRect);
+    SidebarRect := WinRect;
+    SideBarRect.B.X := 8;
+    SideBarRect.B.Y := SideBarRect.B.Y - 1;
+    BrowserRect := WinRect;
+    BrowserRect.A.X := 8;
+    BrowserRect.B.X := BrowserRect.B.X - 1;
+    BrowserRect.B.Y := BrowserRect.B.Y - 1;
+    SideBar^.SetBounds(SidebarRect);
+    Browser^.SetBounds(BrowserRect);
+end;
+
 procedure TBrowserView.SetCaption(NewTitle: AnsiString);
 var
-    C, L: SizeInt;
     TmpTitle: ShortString;
 begin
     TmpTitle := NewTitle; (* Cast by assigning to temp. This will truncate to 255 chars. *)
