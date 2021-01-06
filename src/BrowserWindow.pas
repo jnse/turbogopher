@@ -157,13 +157,13 @@ begin
                 end;
                 kbAltUp:
                 begin
-                    SideBar^.SelectPrevious;
+                    SideBar^.SelectPrevious(Browser^);
                     ClearEvent(Event);
                     Draw;
                 end;
                 kbAltDown:
                 begin
-                    SideBar^.SelectNext;
+                    SideBar^.SelectNext(Browser^);
                     ClearEvent(Event);
                     Draw;
                 end;
@@ -234,6 +234,7 @@ begin
             Browser^.Add(MenuItems[I].DisplayString);
         end;
         SideBar^.SetItems(MenuItems);
+        SideBar^.SelectFirst(Browser^);
         SetCaption(IntToStr(Number) + ': ' + url);
     end;
 end;

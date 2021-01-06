@@ -25,6 +25,7 @@ type
         Port: RawByteString;
         Valid: Boolean;
         Source: RawByteString;
+        Position: SizeInt;
     end;
 
     TGopherMenuItems = array of TGopherMenuItem;
@@ -112,13 +113,17 @@ implementation
             begin
                 if Lines[I] = '.' then Exit; { Single dot marks the end. }
                 if IsMenu = True then
-                    MenuItem := ParseMenuItem(Lines[I])
+                begin
+                    MenuItem := ParseMenuItem(Lines[I]);
+                    MenuItem.Position := I;
+                end
                 else
                 begin
                     MenuItem.ItemType := 'i';
                     MenuItem.SelectorString := '';
                     MenuItem.DisplayString := Lines[I];
                     MenuItem.Valid := True;
+                    MenuItem.Position := I;
                 end;
                 SetLength(Result, Length(Result) + 1);
                 Result[Length(Result) - 1] := MenuItem;
@@ -140,6 +145,7 @@ implementation
         Result.Port := CurrentPort;
         Result.Valid := False;
         Result.Source := ItemLine;
+        Result.Position := 0;
         (* We need at least a first character to get an item type. *)
         if (Length(ParsedItem) < 1) then Exit;
         Result.ItemType := ParsedItem[1];

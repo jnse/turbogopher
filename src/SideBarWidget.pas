@@ -26,21 +26,23 @@ type
         );
         procedure Add(Item: TGopherMenuItem);
         procedure Draw; virtual;
+        function GetDelta: SizeInt;
         function GetFirst: SizeInt;
         function GetLast: SizeInt;
         function GetSelected: PGopherMenuItem;
         procedure Reset;
         procedure SetDelta(d: SizeInt);
         procedure SetItems(MenuItems: TGopherMenuItems);
-        procedure SelectFirst;
-        procedure SelectNext;
-        procedure SelectPrevious;
-        procedure SelectLast;
+        procedure SelectFirst(var Browser: TScroller);
+        procedure SelectNext(var Browser: TScroller);
+        procedure SelectPrevious(var Browser: TScroller);
+        procedure SelectLast(var Browser: TScroller);
         private
             App: TTurboGopherApplication;
             Delta: SizeInt;
             Items: TGopherMenuItems;
             Rect: TRect;
+            SelectedDelta: SizeInt;
             SelectedIndex: SizeInt;
             const
                 defaultBackgroundAttrs = $0f;
@@ -64,6 +66,8 @@ type
 
 implementation
 
+uses BrowserWidget;
+
 { Helper functions }
 
 function IsSelectable(Item: TGopherMenuItem): Boolean;
@@ -83,6 +87,7 @@ constructor TSideBarWidget.Init(
 );
 begin
     Delta := 0;
+    SelectedDelta := 0;
     Rect := Bounds;
     TView.Init(Bounds);
     App := TheApp;
@@ -93,7 +98,6 @@ procedure TSideBarWidget.Add(Item: TGopherMenuItem);
 begin
     SetLength(Items, Length(Items) + 1);
     Items[Length(Items) - 1] := Item;
-    SelectFirst;
 end;
 
 procedure TSideBarWidget.Draw;
@@ -222,12 +226,21 @@ begin
         else
             Entry := '       '
         end;
-        if (Selectable = True) and (I = SelectedIndex) then InvertColor(Color);
+        if (Selectable = True) and (I = SelectedIndex) then
+        begin
+            SelectedDelta := I;
+            InvertColor(Color);
+        end;
         MoveStr(DrawBuffer, Entry, Color);
         WriteBuf(0, L, Length(Entry), 1, DrawBuffer);
         MoveStr(DrawBuffer, Chr(179), DefaultBackgroundAttrs);
         WriteBuf(Length(Entry), L, 1, 1, DrawBuffer);
     end;
+end;
+
+function TSideBarWidget.GetDelta: SizeInt;
+begin
+    Result := SelectedDelta;
 end;
 
 function TSideBarWidget.GetFirst: SizeInt;
@@ -277,7 +290,6 @@ end;
 procedure TSideBarWidget.SetItems(MenuItems: TGopherMenuItems);
 begin
     Items := MenuItems;
-    SelectFirst;
 end;
 
 procedure TSideBarWidget.Reset;
@@ -286,21 +298,64 @@ begin
     SelectedIndex := 0;
 end;
 
-procedure TSideBarWidget.SelectFirst;
-begin
-    SelectedIndex := GetFirst;
-end;
-
-procedure TSideBarWidget.SelectLast;
-begin
-    SelectedIndex := GetLast;
-end;
-
-procedure TSideBarWidget.SelectNext;
+procedure TSideBarWidget.SelectFirst(var Browser: TScroller);
 var
+    BrowserEnd: SizeInt = 0;
+    BrowserObj: PBrowserWidget;
+    BrowserRect: TRect;
+    BrowserStart: SizeInt = 0;
+begin
+    BrowserObj := @Browser;
+    BrowserRect := default(TRect);
+    BrowserObj^.GetBounds(BrowserRect);
+    BrowserStart := BrowserObj^.Delta.Y;
+    BrowserEnd := BrowserStart + BrowserRect.B.Y;
+    SelectedIndex := GetFirst;
+    if Items[SelectedIndex].Position <= BrowserStart then
+    begin
+        BrowserObj^.ScrollTo(
+            BrowserObj^.Delta.X,
+            Items[SelectedIndex].Position
+        );
+    end;
+end;
+
+procedure TSideBarWidget.SelectLast(var Browser: TScroller);
+var
+    BrowserEnd: SizeInt = 0;
+    BrowserObj: PBrowserWidget;
+    BrowserRect: TRect;
+    BrowserStart: SizeInt = 0;
+begin
+    BrowserObj := @Browser;
+    BrowserRect := default(TRect);
+    BrowserObj^.GetBounds(BrowserRect);
+    BrowserStart := BrowserObj^.Delta.Y;
+    BrowserEnd := BrowserStart + BrowserRect.B.Y;
+    SelectedIndex := GetLast;
+    if Items[SelectedIndex].Position >= BrowserEnd then
+    begin
+        BrowserObj^.ScrollTo(
+            BrowserObj^.Delta.X,
+            Items[SelectedIndex].Position - BrowserRect.B.Y + 1
+        );
+    end;
+end;
+
+procedure TSideBarWidget.SelectNext(var Browser: TScroller);
+var
+    BrowserEnd: SizeInt = 0;
+    BrowserObj: PBrowserWidget;
+    BrowserRect: TRect;
+    BrowserStart: SizeInt = 0;
     I: SizeInt = 0;
     Last: SizeInt = 0;
 begin
+    BrowserObj := @Browser;
+    BrowserRect := default(TRect);
+    BrowserObj^.GetBounds(BrowserRect);
+    BrowserStart := BrowserObj^.Delta.Y;
+    BrowserEnd := BrowserStart + BrowserRect.B.Y;
     if Length(Items) = 0 then
     begin
         SelectedIndex := 0;
@@ -313,13 +368,29 @@ begin
     end;
     if I > Last then I := Last;
     SelectedIndex := I;
+    if Items[SelectedIndex].Position >= BrowserEnd then
+    begin
+        BrowserObj^.ScrollTo(
+            BrowserObj^.Delta.X,
+            Items[SelectedIndex].Position - BrowserRect.B.Y + 1
+        );
+    end;
 end;
 
-procedure TSideBarWidget.SelectPrevious;
+procedure TSideBarWidget.SelectPrevious(var Browser: TScroller);
 var
+    BrowserEnd: SizeInt = 0;
+    BrowserObj: PBrowserWidget;
+    BrowserRect: TRect;
+    BrowserStart: SizeInt = 0;
     First: SizeInt = 0;
     I: SizeInt = 0;
 begin
+    BrowserObj := @Browser;
+    BrowserRect := default(TRect);
+    BrowserObj^.GetBounds(BrowserRect);
+    BrowserStart := BrowserObj^.Delta.Y;
+    BrowserEnd := BrowserStart + BrowserRect.B.Y;
     if Length(Items) = 0 then
     begin
         SelectedIndex := 0;
@@ -334,6 +405,13 @@ begin
     end;
     if I < First then I := First;
     SelectedIndex := I;
+    if Items[SelectedIndex].Position <= BrowserStart then
+    begin
+        BrowserObj^.ScrollTo(
+            BrowserObj^.Delta.X,
+            Items[SelectedIndex].Position
+        );
+    end;
 end;
 
 
