@@ -93,7 +93,8 @@ end;
 
 procedure TBrowserView.AppendHistory(url: AnsiString);
 begin
-    InsertAt(History, url, HistoryIndex + 1);
+    SetLength(History, Length(History) + 1);
+    History[Length(History) - 1] := url;
 end;
 
 procedure TBrowserView.Close;
@@ -293,7 +294,8 @@ procedure TBrowserWindow.Get(url: AnsiString);
 begin
     Win^.Get(url);
     Win^.AppendHistory(url);
-    Win^.HistoryIndex := Win^.HistoryIndex + 1;
+    if (Length(Win^.History) > 1) then
+        Win^.HistoryIndex := Win^.HistoryIndex + 1;
 end;
 
 function TBrowserWindow.GetHistory: TStringArray;
