@@ -58,30 +58,71 @@ implementation
        (mostly block drawing stuff, with their nearest equivalent in ANSI rather
        than just showing an unknown glyph question mark. *)
     function UTF8Hack(const inputString: RawByteString): AnsiString;
+    var
+        I: SizeInt;
     begin
         Result := inputString;
+        Result := Result.Replace(chr($20) + chr($cc) + chr($b6), '');
+        Result := Result.Replace(chr($20) + chr($cc) + chr($b8), '');
+        Result := Result.Replace(chr($b9) + chr($cc) + chr($a7), '');
+        Result := Result.Replace(chr($e2) + chr($80) + chr($a2), chr(7));
+        Result := Result.Replace(chr($e2) + chr($80) + chr($ba), '>');
+        Result := Result.Replace(chr($e2) + chr($88) + chr($99), chr($f9));
+        Result := Result.Replace(chr($e2) + chr($94) + chr($81), chr(254));
+        Result := Result.Replace(chr($e2) + chr($94) + chr($88), chr(196));
+        Result := Result.Replace(chr($e2) + chr($94) + chr($8f), chr(218));
+        Result := Result.Replace(chr($e2) + chr($94) + chr($93), chr(191));
+        Result := Result.Replace(chr($e2) + chr($94) + chr($bb), chr(193));
         Result := Result.Replace(chr($e2) + chr($95) + chr($b1), '/');
         Result := Result.Replace(chr($e2) + chr($95) + chr($b2), '\');
+        Result := Result.Replace(chr($e2) + chr($95) + chr($bc), chr(196));
+        Result := Result.Replace(chr($e2) + chr($95) + chr($be), chr(196));
         Result := Result.Replace(chr($e2) + chr($96) + chr($80), chr($df));
+        Result := Result.Replace(chr($e2) + chr($96) + chr($81), '_');
+        Result := Result.Replace(chr($e2) + chr($96) + chr($82), chr(220));
+        Result := Result.Replace(chr($e2) + chr($96) + chr($83), chr(220));
         Result := Result.Replace(chr($e2) + chr($96) + chr($84), chr($dc));
+        Result := Result.Replace(chr($e2) + chr($96) + chr($85), chr(220));
+        Result := Result.Replace(chr($e2) + chr($96) + chr($86), chr(220));
+        Result := Result.Replace(chr($e2) + chr($96) + chr($87), chr(219));
+        Result := Result.Replace(chr($e2) + chr($96) + chr($88), chr($db));
+        Result := Result.Replace(chr($e2) + chr($96) + chr($89), chr(219));
+        Result := Result.Replace(chr($e2) + chr($96) + chr($8a), chr(219));
+        Result := Result.Replace(chr($e2) + chr($96) + chr($8b), chr(221));
+        Result := Result.Replace(chr($e2) + chr($96) + chr($8c), chr($dd));
+        Result := Result.Replace(chr($e2) + chr($96) + chr($8d), chr(221));
+        Result := Result.Replace(chr($e2) + chr($96) + chr($8e), chr(221));
+        Result := Result.Replace(chr($e2) + chr($96) + chr($8f), chr(7));
+        Result := Result.Replace(chr($e2) + chr($96) + chr($90), chr(222));
         Result := Result.Replace(chr($e2) + chr($96) + chr($91), chr($b0));
         Result := Result.Replace(chr($e2) + chr($96) + chr($92), chr($b1));
         Result := Result.Replace(chr($e2) + chr($96) + chr($93), chr($b2));
-        Result := Result.Replace(chr($e2) + chr($96) + chr($88), chr($db));
-        Result := Result.Replace(chr($e2) + chr($96) + chr($8c), chr($dd));
+        Result := Result.Replace(chr($e2) + chr($96) + chr($94), chr(223));
+        Result := Result.Replace(chr($e2) + chr($96) + chr($95), chr(222));
         Result := Result.Replace(chr($e2) + chr($96) + chr($96), chr($dd));
-        Result := Result.Replace(chr($e2) + chr($96) + chr($98), chr($dd));
-        Result := Result.Replace(chr($e2) + chr($96) + chr($90), chr($de));
         Result := Result.Replace(chr($e2) + chr($96) + chr($97), chr($de));
+        Result := Result.Replace(chr($e2) + chr($96) + chr($98), chr($dd));
+        Result := Result.Replace(chr($e2) + chr($96) + chr($99), chr($db));
+        Result := Result.Replace(chr($e2) + chr($96) + chr($9a), chr(219));
+        Result := Result.Replace(chr($e2) + chr($96) + chr($9b), chr(219));
         Result := Result.Replace(chr($e2) + chr($96) + chr($9c), chr($de));
         Result := Result.Replace(chr($e2) + chr($96) + chr($9d), chr($de));
-        Result := Result.Replace(chr($e2) + chr($96) + chr($99), chr($db));
         Result := Result.Replace(chr($e2) + chr($96) + chr($9b), chr($db));
         Result := Result.Replace(chr($e2) + chr($96) + chr($9c), chr($db));
+        Result := Result.Replace(chr($e2) + chr($96) + chr($9d), chr(223));
+        Result := Result.Replace(chr($e2) + chr($96) + chr($9e), chr(219));
         Result := Result.Replace(chr($e2) + chr($96) + chr($9f), chr($db));
-        Result := Result.Replace(chr($e2) + chr($88) + chr($99), chr($f9));
-        Result := Result.Replace(chr($e2) + chr($80) + chr($ba), '>');
+        Result := Result.Replace(chr($e2) + chr($96) + chr($a0), chr(220));
+        Result := Result.Replace(chr($e2) + chr($96) + chr($aa), chr(250));
+        Result := Result.Replace(chr($e2) + chr($96) + chr($bc), chr(31));
+        Result := Result.Replace(chr($e2) + chr($97) + chr($86), chr(4));
+        Result := Result.Replace(chr($e2) + chr($97) + chr($8f), chr(7));
         Result := Result.Replace(chr($c2) + chr($b7), chr($fa));
+        for I := 128 to 255 do
+        begin
+            Result := Result.Replace(chr($cd) + chr(I), '');
+            Result := Result.Replace(chr($cc) + chr(I), '');
+        end;
     end;
 
     { TGopherClient }
