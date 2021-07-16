@@ -29,18 +29,18 @@ type
     public
         constructor Create;
         function Count(Filter: TLogLevelFilter): SizeInt;
-        procedure Debug(const Message: string);
-        procedure Error(const Message: string);
-        procedure Fatal(const Message: string);
+        procedure Debug(const Message: AnsiString);
+        procedure Error(const Message: AnsiString);
+        procedure Fatal(const Message: AnsiString);
         function GetRange(
             const FromMsg, ToMsg: SizeInt;
             const Filter: TLogLevelFilter
         ): TLogMessages;
-        procedure Info(const Message: string);
-        procedure Log(const Message: string; const Level: TLogLevel);
+        procedure Info(const Message: AnsiString);
+        procedure Log(const Message: AnsiString; const Level: TLogLevel);
         function ParseLevel(const Level: TLogLevel): AnsiString;
         procedure RegisterCallback(Callback: TLogCallback);
-        procedure Warning(const Message: string);
+        procedure Warning(const Message: AnsiString);
     private
         LogMessages: TLogMessages;
         LogCallbacks: array of TLogCallback;
@@ -65,17 +65,17 @@ implementation
         end;
     end;
 
-    procedure TLogger.Debug(const Message: string);
+    procedure TLogger.Debug(const Message: AnsiString);
     begin
         Log(Message, TLogLevel.debug);
     end;
 
-    procedure TLogger.Error(const Message: string);
+    procedure TLogger.Error(const Message: AnsiString);
     begin
         Log(Message, TLogLevel.error);
     end;
 
-    procedure TLogger.Fatal(const Message: string);
+    procedure TLogger.Fatal(const Message: AnsiString);
     begin
         Log(Message, TLogLevel.fatal);
     end;
@@ -107,12 +107,12 @@ implementation
         end;
     end;
 
-    procedure TLogger.Info(const Message: string);
+    procedure TLogger.Info(const Message: AnsiString);
     begin
         Log(Message, TLogLevel.info);
     end;
 
-    procedure TLogger.Log(const Message: string; const Level: TLogLevel);
+    procedure TLogger.Log(const Message: AnsiString; const Level: TLogLevel);
     var
       NewMessage: TLogMessage;
       I: SizeInt;
@@ -127,7 +127,7 @@ implementation
         end;
     end;
 
-    function TLogger.ParseLevel(const Level: TLogLevel): string;
+    function TLogger.ParseLevel(const Level: TLogLevel): AnsiString;
     begin
         Result := 'unknown';
         case Level of
@@ -145,7 +145,7 @@ implementation
         LogCallbacks[Length(LogCallbacks) - 1] := Callback;
     end;
 
-    procedure TLogger.Warning(const Message: string);
+    procedure TLogger.Warning(const Message: AnsiString);
     begin
         Log(Message, TLogLevel.warning);
     end;

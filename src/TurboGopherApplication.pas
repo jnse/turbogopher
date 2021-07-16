@@ -13,6 +13,7 @@ uses
     Objects,
     Classes,
     CustApp,
+    Dialogs,
     Drivers,
     Views,
     Menus,
@@ -41,6 +42,7 @@ type
         procedure CloseBrowserWindow(WindowNumber: Integer);
         procedure CreateBrowserWindow;
         procedure Draw;
+        function ExecuteDialog(P: PDialog; Data: Pointer): Word;
         function GetClient(): TGopherClient;
         procedure GetExtent(var Extent: Objects.TRect);
         function GetLogger(): PLogger;
@@ -243,6 +245,11 @@ implementation
     destructor TTurboGopherApplication.Destroy;
     begin
       inherited Destroy;
+    end;
+
+    function TTurboGopherApplication.ExecuteDialog(P: PDialog; Data: Pointer): Word;
+    begin
+        Result := TurboGraphicsApplication.ExecuteDialog(P, Data);
     end;
 
     function TTurboGopherApplication.GetClient(): TGopherClient;

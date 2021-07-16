@@ -16,7 +16,7 @@ Var
   Application: TTurboGopherApplication;
 Begin
   Application := TTurboGopherApplication.Create(Nil);
-  Application.Title:='TurboGopher';
+    Application.Title:='TurboGopher';
   Application.Run;
   Application.Free;
 End.

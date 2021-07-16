@@ -14,14 +14,16 @@ type
   TFileLogger = class
   public
       constructor Create(LoggerObject: PLogger; LogFileName: AnsiString);
+      destructor Destroy; override;
       procedure OnLogMessage(
-          const Message: string;
+          const Message: AnsiString;
           const Level: TLogLevel
       );
   private
       Logger: PLogger;
       LogFile: AnsiString;
       Filter: TLogLevelFilter;
+      OutStream: TFileStream;
   end;
 
 implementation
@@ -30,6 +32,8 @@ implementation
         LoggerObject: PLogger;
         LogFileName: AnsiString
     );
+    var
+        OutMode: Word;
     begin
         Logger := LoggerObject;
         LogFile := LogFileName;
@@ -41,19 +45,30 @@ implementation
             TLogLevel.fatal
         ];
         Logger^.RegisterCallback(@OnLogMessage);
+
+        OutMode := fmOpenWrite;
+        if not FileExists(LogFile) then OutMode := OutMode or fmCreate;
+        OutStream := TFileStream.Create(LogFile, OutMode);
+        OutStream.Seek(0, soEnd);
+    end;
+
+    destructor TFileLogger.Destroy();
+    begin
+        OutStream.Free;
     end;
 
     procedure TFileLogger.OnLogMessage(
-        const Message: string;
+        const Message: AnsiString;
         const Level: TLogLevel
     );
     var
-        OutStream: TFileStream;
+        OutString: UTF8String;
+        Len: Cardinal;
     begin
         if not (Level in Filter) then Exit;
-        OutStream := TFileStream.Create(LogFile, fmCreate or fmOpenWrite);
-        OutStream.WriteAnsiString(Message + '#10');
-        OutStream.Free;
+        OutString := UTF8String(Message + Chr(10));
+        Len := Length(OutString);
+        OutStream.WriteBuffer(OutString[1], Len);
     end;
 
 end.

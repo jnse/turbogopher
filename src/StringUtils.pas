@@ -5,17 +5,29 @@ unit StringUtils;
 interface
 
 uses
+    Classes,
     Objects,
     SysUtils;
-
 type
     TStringArray = array of AnsiString;
 
+    function HexDump(data: AnsiString): AnsiString;
     procedure InsertAt(var Subject: TStringArray; Token: AnsiString; Index: SizeInt);
     function LTrim(Subject: AnsiString; Token: AnsiString): AnsiString;
     function StringSplit(Haystack, Needle: AnsiString; MaxMatches: SizeInt = 0; IncludeRemainder: Boolean = False) : TStringArray;
 
 implementation
+
+function HexDump(data: AnsiString): AnsiString;
+begin
+    if Length(data) = 0 then
+    begin
+        Result := '';
+        Exit;
+    end;
+    SetLength(Result, 2 * Length(data));
+    BinToHex(@data[1], @Result[1], Length(data));
+end;
 
 procedure InsertAt(var Subject: TStringArray; Token: AnsiString; Index: SizeInt);
 var

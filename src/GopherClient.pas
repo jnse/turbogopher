@@ -16,6 +16,22 @@ uses
 
 type
 
+    (*
+        Users of this unit will typically use the TGopherClient.Get() function
+        to retrieve a result from a gopher server.
+
+        A result can either be displayable content (in the case of plain text
+        (0 type) or a menu (1 type)) - or it can be 'data' to either be
+        downloaded or handled by an external application.
+
+        Internally we handle plain text and gopher menu's in the same way via
+        the TGopherMenuItem record. Non-text data is handled via the
+        TGopherDownload record.
+
+        A TGetResult contains either an array of TGopherMenuItems or a
+        TGopherDownload instance - the ResultType indicates which.
+    *)
+
     PGopherMenuItem = ^TGopherMenuItem;
     TGopherMenuItem = record
         ItemType: char;
@@ -27,8 +43,21 @@ type
         Source: RawByteString;
         Position: SizeInt;
     end;
-
     TGopherMenuItems = array of TGopherMenuItem;
+
+    TGopherDownload = record
+        Data: AnsiString;
+        FileName: RawByteString;
+        Size: SizeInt;
+    end;
+
+    TGetResultType = (GET_RESULT_NOTHING, GET_RESULT_CONTENT, GET_RESULT_DATA);
+
+    TGetResult = record
+        MenuItems: TGopherMenuItems;
+        DownloadData: TGopherDownload;
+        ResultType: TGetResultType;
+    end;
 
     TTokenizedUrl = record
         Host: string;
@@ -40,7 +69,7 @@ type
     TGopherClient = class
     public
         constructor Create(LoggerObject: PLogger);
-        function Get(Url: string): TGopherMenuItems;
+        function Get(Url: string): TGetResult;
         function ParseMenu(const Body: string; IsMenu: Boolean): TGopherMenuItems;
     private
         Logger: PLogger;
@@ -282,21 +311,25 @@ implementation
         end;
     end;
 
-    function TGopherClient.Get(Url: String): TGopherMenuItems;
+    function TGopherClient.Get(Url: String): TGetResult;
     var
         TokenizedUrl: TTokenizedUrl;
+        CharNum: SizeInt;
         ClientSocket: TSocketStream;
+        DownloadData: TGopherDownload;
+        KeepReading: Boolean;
         ResultStr: AnsiString = '';
-        RequestStr: string = '';
-        Part: string = '';
-        Buf: array[0..4095] of Char = '';
-        Count: Integer = 4094;
+        RequestStr: AnsiString = '';
+        Part: AnsiString = '';
+        Buf: array[0..1048577] of Char = '';
+        Count: Integer = 1048576;
         IsMenu: Boolean = False;
         ReadResult: LongInt = 1;
         Menu: TGopherMenuItems;
     begin
         ResultStr := '';
         TokenizedUrl := ParseUrl(Url);
+        Result.ResultType := GET_RESULT_NOTHING;
         try
            ClientSocket := TInetSocket.Create(
                TokenizedUrl.Host,
@@ -316,10 +349,12 @@ implementation
         CurrentPort := IntToStr(TokenizedUrl.Port);
         RequestStr := TokenizedUrl.Path + #13#10;
         ClientSocket.Write(RequestStr[1], Length(RequestStr));
-        while (ReadResult > 0) do
+        KeepReading := True;
+        while (KeepReading = True) do
         begin
             try
                 ReadResult := ClientSocket.Read(Buf, Count);
+                Logger^.Debug('Downloading...: ' + IntToStr(ResultStr.Length) + ' bytes.');
             except
                 on E: ESocketError do
                 begin
@@ -332,21 +367,55 @@ implementation
                     Exit;
                 end;
             end;
-            if ReadResult = 0 then break;
-            Part := Copy(Buf, 0, ReadResult);
+
+            (* Internally, Read() uses the recv() syscall, which returns 0
+               if the connection has been terminated, or -1 on error. *)
+            if ReadResult <= 0 then
+            begin
+                if ReadResult < 0 then
+                begin
+                    Logger^.Debug('Socket error: ' + IntToStr(ClientSocket.LastError));
+                end;
+                break;
+            end;
+            Part := '';
+            for CharNum := 0 to ReadResult - 1 do
+            begin
+                Part := Part + Buf[CharNum];
+            end;
             ResultStr += Part;
             Buf := '';
+            Part := '';
         end;
-        ResultStr := UTF8Hack(ResultStr);
-        Logger^.Debug('Successfully retrieved ' + Url);
         ClientSocket.Free;
-        if TokenizedUrl.DocumentType = '1' then IsMenu := True;
-        Menu := ParseMenu(ResultStr, IsMenu);
-        if (Length(menu) = 0) then
+        (* If ResultStr is blank, we didn't get anything. *)
+        if Length(ResultStr) = 0 then
         begin
-            Logger^.Error('Could not parse server response as menu: ' + ResultStr);
+            Logger^.Error('No result received from server for: ' + Url);
+            Exit;
         end;
-        Result := Menu;
+        Logger^.Debug('Successfully retrieved ' + Url);
+        if TokenizedUrl.DocumentType = '1' then IsMenu := True;
+        if (TokenizedUrl.DocumentType = '0') or (TokenizedUrl.DocumentType = '1') then
+        begin
+            ResultStr := UTF8Hack(ResultStr);
+            Menu := ParseMenu(ResultStr, IsMenu);
+            if (Length(menu) = 0) then
+            begin
+                Logger^.Error('Could not parse server response as menu: ' + ResultStr);
+            end;
+            Result.MenuItems := Menu;
+            Result.ResultType := GET_RESULT_CONTENT;
+        end
+        else
+        begin
+            { handle different types of content here. download? }
+            Result.ResultType := GET_RESULT_DATA;
+            DownloadData.FileName := TokenizedUrl.Path;
+            DownloadData.Data := ResultStr;
+            DownloadData.Size := ResultStr.Length;
+            Result.DownloadData := DownloadData;
+        end;
     end;
 
 end.

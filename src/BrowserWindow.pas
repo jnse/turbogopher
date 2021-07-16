@@ -7,9 +7,11 @@ interface
 uses
     GopherClient,
     BrowserWidget,
+    Dialogs,
     SideBarWidget,
     TurboGopherApplication,
     TurboGopherWindow,
+    StdDlg,
     StringUtils,
 
     App,
@@ -222,21 +224,46 @@ procedure TBrowserView.Get(url: AnsiString);
 var
     Client: TGopherClient;
     MenuItems: TGopherMenuItems;
+    FileDialog: PFileDialog;
+    FileName: FNameStr;
+    GetResult: TGetResult;
     I: SizeInt = 0;
+    OutFile: TFileStream;
 begin
     Client := App.GetClient();
-    MenuItems := Client.Get(url);
-    if (MenuItems <> nil) then
+    GetResult := Client.Get(url);
+    if GetResult.ResultType = GET_RESULT_CONTENT then
     begin
-        Browser^.Reset;
-        Sidebar^.Reset;
-        for I := 0 to Length(MenuItems) - 1 do
+        MenuItems := GetResult.MenuItems;
+        if (MenuItems <> nil) then
         begin
-            Browser^.Add(MenuItems[I].DisplayString);
+            Browser^.Reset;
+            Sidebar^.Reset;
+            for I := 0 to Length(MenuItems) - 1 do
+            begin
+                Browser^.Add(MenuItems[I].DisplayString);
+            end;
+            SideBar^.SetItems(MenuItems);
+            SideBar^.SelectFirst(Browser^);
+            SetCaption(IntToStr(Number) + ': ' + url);
         end;
-        SideBar^.SetItems(MenuItems);
-        SideBar^.SelectFirst(Browser^);
-        SetCaption(IntToStr(Number) + ': ' + url);
+    end
+    else if GetResult.ResultType = GET_RESULT_DATA then
+    begin
+        { @TODO - handle mime type }
+        FileName := ExtractFileName(GetResult.DownloadData.FileName);
+        New(FileDialog, Init(FileName, 'Save file', '~F~ile name', fdOpenButton, 1));
+        if App.ExecuteDialog(FileDialog, @FileName) <> cmCancel then
+        begin
+            OutFile := TFileStream.Create(FileName, fmOpenWrite or fmCreate);
+            try
+                OutFile.Position := 0;
+                OutFile.Write(GetResult.DownloadData.Data[1], GetResult.DownloadData.Size);
+            finally
+                OutFile.Free;
+            end;
+            App.GetLogger^.Debug('Saved file: ' + FileName + ' - Size: ' + IntToStr(GetResult.DownloadData.Size));
+        end;
     end;
 end;
 
