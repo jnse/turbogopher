@@ -67,6 +67,6 @@ log line (for debugging) - this will go away / be configurable eventually.
 * (essential) Add make scripts for people to build this without lazarus. Add packaging stuff, release pipeline stuff.
 * (FV bug?) Application does not resize when terminal is resized.
 * (feature) History menu and/or window.
-* (feature) ability to download/save pages.
+~~* (feature) ability to download/save pages.~~ (Implemented Jul 16 2021)
 
 
